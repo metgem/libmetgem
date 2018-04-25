@@ -181,3 +181,9 @@ ENV/
 # Rope project settings
 .ropeproject
 
+*.cpp
+*.npy
+*.ipynb
+build/
+austrob/
+stilingia/
