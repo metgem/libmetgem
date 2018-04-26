@@ -16,7 +16,7 @@ cdef extern from "<algorithm>" namespace "std" nogil:
     
 cdef packed struct score_t:
   int ix1, ix2
-  double value
+  float value
 
 ctypedef pair[float, float] peak_t
   
@@ -31,8 +31,8 @@ DEF INTENSITY = 1
   
 @cython.boundscheck(False)
 @cython.wraparound(False)
-cdef float cosine_score_nogil(double spectrum1_mz, float[:,:] spectrum1_data, double spectrum2_mz, float[:,:] spectrum2_data, float mz_tolerance, int min_matched_peaks) nogil:
-    cdef double dm
+cdef float cosine_score_nogil(float spectrum1_mz, float[:,:] spectrum1_data, float spectrum2_mz, float[:,:] spectrum2_data, float mz_tolerance, int min_matched_peaks) nogil:
+    cdef float dm
     cdef vector[score_t] scores
     cdef score_t pscore
     cdef int i, j
@@ -90,7 +90,7 @@ cdef float cosine_score_nogil(double spectrum1_mz, float[:,:] spectrum1_data, do
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-cdef float[:,:] compute_distance_matrix_nogil(vector[double] mzvec, vector[float[:,:]] datavec, float mz_tolerance, int min_matched_peaks, object callback=None):
+cdef float[:,:] compute_distance_matrix_nogil(vector[float] mzvec, vector[float[:,:]] datavec, float mz_tolerance, int min_matched_peaks, object callback=None):
     cdef int i, j
     cdef int size = mzvec.size()
     cdef float[:,:] matrix = cvarray(shape=(size, size), itemsize=sizeof(float), format='f')
@@ -115,7 +115,7 @@ cdef float[:,:] compute_distance_matrix_nogil(vector[double] mzvec, vector[float
 @cython.boundscheck(False)
 @cython.wraparound(False)
 @cython.cdivision(True)
-cdef vector[peak_t] filter_data_nogil(float[:,:] data, double mz_parent, int min_intensity, int parent_filter_tolerance, int matched_peaks_window, int min_matched_peaks_search) nogil:
+cdef vector[peak_t] filter_data_nogil(float[:,:] data, float mz_parent, int min_intensity, int parent_filter_tolerance, int matched_peaks_window, int min_matched_peaks_search) nogil:
     cdef Py_ssize_t size = data.shape[0]
     cdef int i, j, count=0
     cdef float mz, intensity, max_intensity=0
@@ -161,14 +161,14 @@ cdef vector[peak_t] filter_data_nogil(float[:,:] data, double mz_parent, int min
         
     return peaks2 #<float[:peaks.size(),:2]>(<float*>peaks.data())
         
-def cosine_score(double spectrum1_mz, float[:,:] spectrum1_data, double spectrum2_mz, float[:,:] spectrum2_data, float mz_tolerance, int min_matched_peaks):
+def cosine_score(float spectrum1_mz, float[:,:] spectrum1_data, float spectrum2_mz, float[:,:] spectrum2_data, float mz_tolerance, int min_matched_peaks):
     return cosine_score_nogil(spectrum1_mz, spectrum1_data, spectrum2_mz, spectrum2_data, mz_tolerance, min_matched_peaks)
     
-def compute_distance_matrix(vector[double] mzvec, vector[float[:,:]] datavec, float mz_tolerance, int min_matched_peaks, object callback=None):
+def compute_distance_matrix(vector[float] mzvec, vector[float[:,:]] datavec, float mz_tolerance, int min_matched_peaks, object callback=None):
     matrix = np.asarray(compute_distance_matrix_nogil(mzvec, datavec, mz_tolerance, min_matched_peaks, callback))
     matrix[matrix>1] = 1
     return matrix
     
-def filter_data(np.ndarray[np.float32_t, ndim=2] data, double mz_parent, int min_intensity, int parent_filter_tolerance, int matched_peaks_window, int min_matched_peaks_search):
+def filter_data(np.ndarray[np.float32_t, ndim=2] data, float mz_parent, int min_intensity, int parent_filter_tolerance, int matched_peaks_window, int min_matched_peaks_search):
     return np.array(filter_data_nogil(data, mz_parent, min_intensity, parent_filter_tolerance, matched_peaks_window, min_matched_peaks_search), dtype=np.float32)
     
