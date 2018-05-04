@@ -14,12 +14,12 @@ ext_modules = [
     ),
     Extension(
         "filter",
-        ["filter.pyx", "common.pyx"],
+        ["filter.pyx"],
         include_dirs=[np.get_include()]
     ),
     Extension(
         "mgf",
-        ["mgf.pyx", "common.pyx"],
+        ["mgf.pyx"],
         include_dirs=[np.get_include()]
     )
 ]
