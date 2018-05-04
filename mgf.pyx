@@ -6,7 +6,7 @@ cimport cython
 import numpy as np
 cimport numpy as np
 from libcpp.vector cimport vector
-from libc.stdlib cimport strtof, strtol
+from libc.stdlib cimport strtof as std_strtof, strtol
 from libc.string cimport strncmp, strncpy, strcpy, strcspn, strlen
 from libc.stdio cimport fopen, fclose, fgets, FILE
 
@@ -19,6 +19,15 @@ DEF MAX_LINE_SIZE = 131 # 128 characters + '\r\n' + '\0'
 cdef extern from "<string.h>" nogil:
     char *strchr (char *string, int c)
     char *strlwr(char *string)
+    
+cdef inline float strtof(char* string, char **endptr) nogil:
+    cdef char *ptr = NULL
+    
+    # Allow comma as decimal separator
+    ptr = strchr(string, ',')
+    if ptr > string:
+        string[ptr-string] = '.'
+    return std_strtof(string, endptr)
     
 cdef void read_data(char line[MAX_LINE_SIZE], vector[peak_t] *peaklist, FILE *fp) nogil:
     """Read peak list from file.
@@ -35,10 +44,10 @@ cdef void read_data(char line[MAX_LINE_SIZE], vector[peak_t] *peaklist, FILE *fp
         if strncmp(line, 'END IONS', 8) == 0:
             return
         else:
-            value = strtof(line, &ptr)
+            value = std_strtof(line, &ptr)
             if value > 0:
                 peak.mz = value
-                peak.intensity = strtof(ptr, NULL)
+                peak.intensity = std_strtof(ptr, NULL)
                 peaklist.push_back(peak)
                 
         if fgets(line, MAX_LINE_SIZE, fp) == NULL:
