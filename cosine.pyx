@@ -1,15 +1,17 @@
 # distutils: language=c++
 
 cimport cython
-import numpy as np
-cimport numpy as np
 from cython.parallel import prange
 from cython.view cimport array as cvarray
+import numpy as np
+cimport numpy as np
+from libcpp cimport bool
 from libcpp.algorithm cimport sort
 from libcpp.vector cimport vector
-from libcpp cimport bool
-from libcpp.utility cimport pair
 from libc.math cimport fabs
+
+DEF MZ = 0
+DEF INTENSITY = 1
 
 cdef extern from "<algorithm>" namespace "std" nogil:
     void fill[Iter, T](Iter first, Iter last, T value)
@@ -17,17 +19,9 @@ cdef extern from "<algorithm>" namespace "std" nogil:
 cdef packed struct score_t:
   int ix1, ix2
   float value
-
-ctypedef pair[float, float] peak_t
   
 cdef bool compareByScore(const score_t &a, const score_t &b) nogil:
     return a.value > b.value
-    
-cdef bool compareByIntensity(const peak_t &a, const peak_t &b) nogil:
-    return a.second > b.second
-    
-DEF MZ = 0
-DEF INTENSITY = 1
   
 @cython.boundscheck(False)
 @cython.wraparound(False)
@@ -111,55 +105,6 @@ cdef float[:,:] compute_distance_matrix_nogil(vector[float] mzvec, vector[float[
         callback(size)
     
     return matrix
-    
-@cython.boundscheck(False)
-@cython.wraparound(False)
-@cython.cdivision(True)
-cdef vector[peak_t] filter_data_nogil(float[:,:] data, float mz_parent, int min_intensity, int parent_filter_tolerance, int matched_peaks_window, int min_matched_peaks_search) nogil:
-    cdef Py_ssize_t size = data.shape[0]
-    cdef int i, j, count=0
-    cdef float mz, intensity, max_intensity=0
-    cdef float abs_min_intensity
-    cdef vector[peak_t] peaks
-    cdef vector[peak_t] peaks2
-    cdef peak_t peak
-    
-    # Sort data array by decreasing intensities
-    sort(<peak_t*>&data[0,0], (<peak_t*>&data[0,0]) + size, compareByIntensity)
-
-    # Filter out peaks with mz below 50 Da or with mz in `mz_parent` +- `parent_filter_tolerance` or with intensity < `min_intensity` % of maximum intensity
-    # Maximum intensity is calculated from peaks not filtered out by mz filters
-    peaks.reserve(size)
-    for i in range(size):
-        mz = data[i, MZ]
-        if 50 <= mz <= mz_parent - parent_filter_tolerance or mz >= mz_parent + parent_filter_tolerance:  # mz filter
-            intensity = data[i, INTENSITY]
-            if intensity < abs_min_intensity:  # intensity filter
-                break
-            elif intensity > max_intensity:
-                max_intensity = intensity
-                abs_min_intensity = min_intensity * max_intensity / 100
-            
-            peak.first = mz
-            peak.second = intensity
-            peaks.push_back(peak)
-    
-    # Window rank filter: For each peak, keep it only if it is in the top `min_matched_peaks_search` peaks in the +/- `matched_peaks_window` range
-    size = peaks.size()
-    peaks2.reserve(size)
-    for i in range(size):
-        mz = peaks[i].first
-        count = 0
-        for j in range(size):
-            if mz - matched_peaks_window <= peaks[j].first <= mz + matched_peaks_window:
-                if j == i:
-                    peaks2.push_back(peaks[i])
-                    break
-                count += 1
-                if count >= min_matched_peaks_search:
-                    break
-        
-    return peaks2 #<float[:peaks.size(),:2]>(<float*>peaks.data())
         
 def cosine_score(float spectrum1_mz, float[:,:] spectrum1_data, float spectrum2_mz, float[:,:] spectrum2_data, float mz_tolerance, int min_matched_peaks):
     return cosine_score_nogil(spectrum1_mz, spectrum1_data, spectrum2_mz, spectrum2_data, mz_tolerance, min_matched_peaks)
@@ -168,7 +113,3 @@ def compute_distance_matrix(vector[float] mzvec, vector[float[:,:]] datavec, flo
     matrix = np.asarray(compute_distance_matrix_nogil(mzvec, datavec, mz_tolerance, min_matched_peaks, callback))
     matrix[matrix>1] = 1
     return matrix
-    
-def filter_data(np.ndarray[np.float32_t, ndim=2] data, float mz_parent, int min_intensity, int parent_filter_tolerance, int matched_peaks_window, int min_matched_peaks_search):
-    return np.array(filter_data_nogil(data, mz_parent, min_intensity, parent_filter_tolerance, matched_peaks_window, min_matched_peaks_search), dtype=np.float32)
-    

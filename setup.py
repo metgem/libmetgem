@@ -11,10 +11,19 @@ ext_modules = [
         include_dirs=[np.get_include()],
         extra_compile_args=['/openmp'],
         extra_link_args=['/openmp']
+    ),
+    Extension(
+        "filter",
+        ["filter.pyx", "common.pyx"],
+        include_dirs=[np.get_include()]
+    ),
+    Extension(
+        "mgf",
+        ["mgf.pyx", "common.pyx"],
+        include_dirs=[np.get_include()]
     )
 ]
 
 setup(
-    name='cosine',
     ext_modules=cythonize(ext_modules),
 )
