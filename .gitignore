@@ -187,3 +187,5 @@ ENV/
 build/
 austrob/
 stilingia/
+*.mgf
+*.csv
