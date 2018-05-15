@@ -10,7 +10,7 @@ from libc.stdlib cimport strtof as std_strtof, strtol
 from libc.string cimport strncmp, strncpy, strcpy, strcspn, strlen
 from libc.stdio cimport fopen, fclose, fgets, FILE
 
-from common cimport peak_t, arr_from_vector
+from .common cimport peak_t, arr_from_vector
 
 DEF MZ = 0
 DEF INTENSITY = 1

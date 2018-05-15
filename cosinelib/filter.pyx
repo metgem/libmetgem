@@ -3,10 +3,11 @@
 cimport cython
 import numpy as np
 cimport numpy as np
+from libc.math cimport sqrt
 from libcpp cimport bool
 from libcpp.vector cimport vector
 from libcpp.algorithm cimport sort
-from common cimport peak_t, arr_from_vector
+from .common cimport peak_t, arr_from_vector
 
 DEF MZ = 0
 DEF INTENSITY = 1
@@ -55,6 +56,7 @@ cdef vector[peak_t] filter_data_nogil(float[:,:] data, float mz_parent, int min_
         for j in range(size):
             if mz - matched_peaks_window <= peaks[j].mz <= mz + matched_peaks_window:
                 if j == i:
+                    peaks[i].intensity = sqrt(peaks[i].intensity) * 10  # Use square root of intensities to minimize/maximize effects of high/low intensity peaks
                     peaks2.push_back(peaks[i])
                     break
                 count += 1
@@ -65,4 +67,9 @@ cdef vector[peak_t] filter_data_nogil(float[:,:] data, float mz_parent, int min_
         
 def filter_data(np.ndarray[np.float32_t, ndim=2] data, float mz_parent, int min_intensity, int parent_filter_tolerance, int matched_peaks_window, int min_matched_peaks_search):
     cdef vector[peak_t] peaks = filter_data_nogil(data, mz_parent, min_intensity, parent_filter_tolerance, matched_peaks_window, min_matched_peaks_search)
-    return np.asarray(arr_from_vector(peaks))
+    cdef np.ndarray[np.float32_t, ndim=2] filtered = np.asarray(arr_from_vector(peaks))
+    
+    # Normalize data to norm 1
+    filtered[:, INTENSITY] = filtered[:, INTENSITY] / np.sqrt(filtered[:, INTENSITY] @ filtered[:, INTENSITY])
+    
+    return filtered
