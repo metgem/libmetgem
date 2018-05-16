@@ -69,12 +69,12 @@ def filter_data(np.ndarray[np.float32_t, ndim=2] data, float mz_parent, int min_
     cdef np.ndarray[np.float32_t, ndim=2] filtered
     cdef vector[peak_t] peaks = filter_data_nogil(data, mz_parent, min_intensity, parent_filter_tolerance, matched_peaks_window, min_matched_peaks_search)
     
-    if peaks.size() > 0:
-        filtered = np.asarray(arr_from_vector(peaks))
+    if peaks.size() == 0:
+        return np.empty((0,2), dtype=np.float32)
+        
+    filtered = np.asarray(arr_from_vector(peaks))
     
-        # Normalize data to norm 1
-        filtered[:, INTENSITY] = filtered[:, INTENSITY] / np.sqrt(filtered[:, INTENSITY] @ filtered[:, INTENSITY])
+    # Normalize data to norm 1
+    filtered[:, INTENSITY] = filtered[:, INTENSITY] / np.sqrt(filtered[:, INTENSITY] @ filtered[:, INTENSITY])
     
-        return filtered
-    else:
-        return np.array([])
+    return filtered

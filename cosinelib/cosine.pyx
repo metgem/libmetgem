@@ -38,6 +38,9 @@ cdef float cosine_score_nogil(float spectrum1_mz, float[:,:] spectrum1_data, flo
     cdef Py_ssize_t size1 = spectrum1_data.shape[0]
     cdef Py_ssize_t size2 = spectrum2_data.shape[0]
     
+    if size1 == 0 or size2 == 0:
+        return 0.
+    
     dm = spectrum1_mz - spectrum2_mz
 
     if dm == 0.:
