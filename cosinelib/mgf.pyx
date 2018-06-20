@@ -104,11 +104,13 @@ cdef tuple read_entry(FILE * fp, bint ignore_unknown=False):
                         break
                     if fgets(line, MAX_LINE_SIZE, fp) == NULL:
                         break
-                return
+                return params, np.empty((0,0), dtype=np.float32)
             else:
                 read_data(line, &peaklist, fp)
                 if peaklist.size() > 0:
                     return params, np.asarray(arr_from_vector(peaklist))
+                else:
+                    return params, np.empty((0,0), dtype=np.float32)
                 return
                 
 # @cython.binding(True)
