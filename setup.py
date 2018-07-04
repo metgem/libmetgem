@@ -6,30 +6,30 @@ import numpy as np
 
 ext_modules = [
     Extension(
-        "cosinelib.cosine",
-        ["cosinelib/cosine.pyx"],
+        "libmetgem.cosine",
+        ["libmetgem/cosine.pyx"],
         include_dirs=[np.get_include()],
         extra_compile_args=['/openmp'],
         extra_link_args=['/openmp']
     ),
     Extension(
-        "cosinelib.filter",
-        ["cosinelib/filter.pyx"],
+        "libmetgem.filter",
+        ["libmetgem/filter.pyx"],
         include_dirs=[np.get_include()]
     ),
     Extension(
-        "cosinelib.mgf",
-        ["cosinelib/mgf.pyx"],
+        "libmetgem.mgf",
+        ["libmetgem/mgf.pyx"],
         include_dirs=[np.get_include()]
     ),
     Extension(
-        "cosinelib.common",
-        ["cosinelib/common.pyx"]
+        "libmetgem.common",
+        ["libmetgem/common.pyx"]
     )
 ]
 
 setup(
-    name='cosinelib',
-    version='0.1',
+    name='libmetgem',
+    version='1.0',
     ext_modules=cythonize(ext_modules),
 )
