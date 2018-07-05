@@ -2,6 +2,7 @@
 # # cython: linetrace=True
 # # distutils: define_macros=CYTHON_TRACE_NOGIL=1
 
+import sys
 cimport cython
 import numpy as np
 cimport numpy as np
@@ -116,12 +117,19 @@ cdef tuple read_entry(FILE * fp, bint ignore_unknown=False):
 # @cython.binding(True)
 def read(str filename, bint ignore_unknown=False):
     cdef:
-        bytes fname_bytes = filename.encode("UTF-8")
-        char *fname = fname_bytes
+        bytes fname_bytes
+        char *fname
         tuple entry
         char line[MAX_LINE_SIZE]
         FILE *fp
 
+    if sys.platform == 'win32':
+        fname_bytes = filename.encode("mbcs")
+    else:
+        fname_bytes = filename.encode("UTF-8")
+        
+    fname = fname_bytes
+        
     fp = fopen(fname, 'r')
     if fp == NULL:
         return
