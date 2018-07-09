@@ -2,7 +2,6 @@
 # # cython: linetrace=True
 # # distutils: define_macros=CYTHON_TRACE_NOGIL=1
 
-import sys
 cimport cython
 import numpy as np
 cimport numpy as np
@@ -19,7 +18,26 @@ DEF MAX_LINE_SIZE = 131 # 128 characters + '\r\n' + '\0'
 
 cdef extern from "<string.h>" nogil:
     char *strchr (char *string, int c)
-    char *strlwr(char *string)
+
+IF WIN32:
+    DEF CHARSET = "mbcs"
+
+    cdef extern from "<string.h>" nogil:
+        char *strlwr (char *string)
+ELSE:
+    DEF CHARSET = "UTF-8"
+
+    cdef extern from "<ctype.h>" nogil:
+        int tolower(int c)
+
+    cdef char* strlwr(char* string) nogil:
+        cdef int i=0
+
+        while string[i] != '\0':
+            string[i] = tolower(string[i])
+            i += 1
+
+        return string
     
 cdef inline float strtof(char* string, char **endptr) nogil:
     cdef char *ptr = NULL
@@ -123,10 +141,7 @@ def read(str filename, bint ignore_unknown=False):
         char line[MAX_LINE_SIZE]
         FILE *fp
 
-    if sys.platform == 'win32':
-        fname_bytes = filename.encode("mbcs")
-    else:
-        fname_bytes = filename.encode("UTF-8")
+    fname_bytes = filename.encode(CHARSET)
         
     fname = fname_bytes
         
