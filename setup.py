@@ -32,7 +32,12 @@ ext_modules = [
     ),
     Extension(
         "libmetgem.common",
-        ["libmetgem/common.pyx"]
+        ["libmetgem/common.pyx"],
+        include_dirs=[np.get_include()]
+    ),
+    Extension(
+        "libmetgem.database",
+        ["libmetgem/database.pyx"]
     )
 ]
 
