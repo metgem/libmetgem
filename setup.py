@@ -37,7 +37,13 @@ ext_modules = [
     ),
     Extension(
         "libmetgem.database",
-        ["libmetgem/database.pyx"]
+        ["libmetgem/database.pyx"],
+        include_dirs=[np.get_include()]
+    ),
+    Extension(
+        "libmetgem.network",
+        ["libmetgem/network.pyx"],
+        include_dirs=[np.get_include()]
     )
 ]
 
