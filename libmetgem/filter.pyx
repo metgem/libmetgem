@@ -98,7 +98,7 @@ cdef vector[vector[peak_t]] filter_data_multi_nogil(vector[double] mzvec, vector
         data_size = data_sizes[i]
         data_p = datavec[i]
         spectra[i] = filter_data_nogil(mzvec[i], data_p, data_size, min_intensity, parent_filter_tolerance, matched_peaks_window, min_matched_peaks_search)
-        if has_callback and i%100 == 0:
+        if has_callback and i % 100 == 0:
             with gil:
                 callback(100)
         
