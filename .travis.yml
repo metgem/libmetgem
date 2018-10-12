@@ -47,7 +47,6 @@ before_install:
         fi;
       fi;
       bash $HOME/download/miniconda.sh -b -p $HOME/miniconda;
-    fi
     
 install:
     - export PATH="$HOME/miniconda/bin:$PATH"
@@ -55,7 +54,7 @@ install:
     
     # Configure conda and get a few essentials
     - conda config --set always_yes yes
-    - conda config --add channels theochem
+    #- conda config --add channels metgem
     - conda install -q conda conda-build conda-verify
     
     # Get the right python version for building. This only does something for 3.5.
@@ -79,7 +78,7 @@ install:
         # Make CPP and PY source package for github deployment
         - if [[ $TRAVIS_TAG ]]; then
             python setup.py sdist;
-        fi
+          fi
         
 after_success:
     # Upload the coverage analysis
