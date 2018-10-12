@@ -10,6 +10,8 @@ env:
     - PYPI_LOGIN=n-elie
     
 language: python
+python:
+    - "3.6"
 os:
   - linux
   - osx
