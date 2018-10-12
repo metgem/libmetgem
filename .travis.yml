@@ -69,16 +69,16 @@ install:
     - travis_wait pip install -r requirements.txt
     - travis_wait pip install pytest pylint pytest-pylint pytest-cov codecov
     
-    script:
-        - python setup.py build_ext -i --define CYTHON_TRACE_NOGIL
-        - python setup.py install
-        - pytest --pylint --pylint-rcfile=.pyrcfile --pylint-error-types=EF libmetgem
-        - cd tests;pytest --cov=libmetgem
-        
-        # Make CPP and PY source package for github deployment
-        - if [[ $TRAVIS_TAG ]]; then
-            python setup.py sdist;
-          fi
+script:
+    - python setup.py build_ext -i --define CYTHON_TRACE_NOGIL
+    - python setup.py install
+    - pytest --pylint --pylint-rcfile=.pyrcfile --pylint-error-types=EF libmetgem
+    - cd tests;pytest --cov=libmetgem
+    
+    # Make CPP and PY source package for github deployment
+    - if [[ $TRAVIS_TAG ]]; then
+        python setup.py sdist;
+        fi
         
 after_success:
     # Upload the coverage analysis
