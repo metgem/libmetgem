@@ -2,3 +2,4 @@ name: libmetgem
 dependencies:
     - sphinx
     - numpy
+    - python=3.6
