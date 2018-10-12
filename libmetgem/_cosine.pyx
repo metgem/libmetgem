@@ -11,7 +11,7 @@ from libcpp.algorithm cimport sort
 from libcpp.vector cimport vector
 from libc.math cimport fabs
 
-from .common cimport peak_t, np_arr_pointer
+from ._common cimport peak_t, np_arr_pointer
 
 DEF MZ = 0
 DEF INTENSITY = 1

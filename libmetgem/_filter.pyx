@@ -10,7 +10,7 @@ from libcpp cimport bool
 from libcpp.vector cimport vector
 from libcpp.algorithm cimport sort
 
-from .common cimport peak_t, arr_from_vector, np_arr_pointer
+from ._common cimport peak_t, arr_from_vector, np_arr_pointer
 
 DEF MZ = 0
 DEF INTENSITY = 1
@@ -23,8 +23,8 @@ cdef bool compareByIntensity(const peak_t &a, const peak_t &b) nogil:
 @cython.cdivision(True)
 cdef vector[peak_t] filter_data_nogil(double mz_parent, const peak_t *data, int data_size, int min_intensity, int parent_filter_tolerance, int matched_peaks_window, int min_matched_peaks_search) nogil:
     cdef int i, j, count=0
-    cdef double mz, intensity, max_intensity=0
-    cdef double abs_min_intensity
+    cdef double mz, intensity
+    cdef double abs_min_intensity = -1.
     cdef vector[peak_t] peaks
     cdef vector[peak_t] peaks2
     cdef vector[peak_t] peaks3
@@ -45,11 +45,12 @@ cdef vector[peak_t] filter_data_nogil(double mz_parent, const peak_t *data, int 
         mz = peaks[i].mz
         if 50 <= mz <= mz_parent - parent_filter_tolerance or mz >= mz_parent + parent_filter_tolerance:  # mz filter
             intensity = peaks[i].intensity
+            
+            if abs_min_intensity < 0:
+                abs_min_intensity = min_intensity / 100. * intensity
+            
             if intensity < abs_min_intensity:  # intensity filter
                 break
-            elif intensity > max_intensity:
-                max_intensity = intensity
-                abs_min_intensity = min_intensity * max_intensity / 100
             
             peak.mz = mz
             peak.intensity = intensity
@@ -64,14 +65,14 @@ cdef vector[peak_t] filter_data_nogil(double mz_parent, const peak_t *data, int 
         mz = peak.mz
         count = 0
         for j in range(size):
-            if mz - matched_peaks_window <= peaks2[j].mz <= mz + matched_peaks_window:
+            if matched_peaks_window==0 or mz - matched_peaks_window <= peaks2[j].mz <= mz + matched_peaks_window:
                 if j == i:
                     peak.intensity = sqrt(peak.intensity) * 10  # Use square root of intensities to minimize/maximize effects of high/low intensity peaks
                     peaks3.push_back(peak)
                     dot_product += peak.intensity * peak.intensity # Calculate dot product for later normalization
                     break
                 count += 1
-                if count >= min_matched_peaks_search:
+                if count >= min_matched_peaks_search > 0:
                     break
                     
     # Normalize data to norm 1

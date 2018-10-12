@@ -1,7 +1,8 @@
 # cython: language_level=3
 # distutils: language=c++
-# # cython: linetrace=True
-# # distutils: define_macros=CYTHON_TRACE_NOGIL=1
+
+import errno
+import os
 
 cimport cython
 import numpy as np
@@ -11,7 +12,7 @@ from libc.stdlib cimport strtod as std_strtod, strtol
 from libc.string cimport strncmp, strncpy, strcpy, strcspn, strlen
 from libc.stdio cimport fopen, fclose, fgets, FILE
 
-from .common cimport peak_t, arr_from_vector
+from ._common cimport peak_t, arr_from_vector
 
 DEF MZ = 0
 DEF INTENSITY = 1
@@ -40,6 +41,7 @@ ELSE:
 
         return string
     
+    
 cdef inline double strtod(char* string, char **endptr) nogil:
     cdef char *ptr = NULL
     
@@ -48,6 +50,7 @@ cdef inline double strtod(char* string, char **endptr) nogil:
     if ptr > string:
         string[ptr-string] = b'.'
     return std_strtod(string, endptr)
+    
     
 cdef void read_data(char line[MAX_LINE_SIZE], vector[peak_t] *peaklist, FILE *fp) nogil:
     """Read peak list from file.
@@ -72,7 +75,8 @@ cdef void read_data(char line[MAX_LINE_SIZE], vector[peak_t] *peaklist, FILE *fp
                 
         if fgets(line, MAX_LINE_SIZE, fp) == NULL:
             return
-            
+           
+           
 cdef tuple read_entry(FILE * fp, bint ignore_unknown=False):
     """Read a spectrum entry (params and peaklist) from file
     """
@@ -132,7 +136,7 @@ cdef tuple read_entry(FILE * fp, bint ignore_unknown=False):
                 else:
                     return params, np.empty((0,0), dtype=np.float32)
                 
-# @cython.binding(True)
+
 def read(str filename, bint ignore_unknown=False):
     cdef:
         bytes fname_bytes
@@ -147,7 +151,9 @@ def read(str filename, bint ignore_unknown=False):
         
     fp = fopen(fname, 'r')
     if fp == NULL:
-        return
+        raise FileNotFoundError(errno.ENOENT,
+                                os.strerror(errno.ENOENT),
+                                filename)
 
     while fgets(line, MAX_LINE_SIZE, fp) != NULL:
         if strncmp(line, 'BEGIN IONS', 10) == 0:

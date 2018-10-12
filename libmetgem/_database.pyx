@@ -1,7 +1,5 @@
 # cython: language_level=3
 # distutils: language=c++
-# distutils: sources = libmetgem/sqlite/sqlite3.c
-# distutils: include_dirs = libmetgem/sqlite
 
 cimport cython
 from libc.string cimport const_char, strcpy
@@ -15,9 +13,9 @@ from libcpp.vector cimport vector
 import numpy as np
 cimport numpy as np
 
-from .filter cimport filter_data_nogil
-from .common cimport peak_t, np_arr_pointer
-from .cosine cimport cosine_score_nogil
+from ._filter cimport filter_data_nogil
+from ._common cimport peak_t, np_arr_pointer
+from ._cosine cimport cosine_score_nogil
 
 from sqlite3 import (InternalError, DataError, DatabaseError, OperationalError,
                      IntegrityError, ProgrammingError)
@@ -273,7 +271,7 @@ cdef query_result_t query_nogil(char *fname, vector[int] indices,
                 max_rows += 1
                 
     if max_rows == 0:
-        qr.res_code = -1
+        qr.res_code = SQLITE_OK
         return qr
     
     # Reset statement
@@ -383,7 +381,7 @@ def query(str filename, vector[int] indices, vector[double] mzvec, list datavec,
                            
     if qr.res_code == SQLITE_OK:
         return qr.results
-    elif qr.res_code < 0: # User canceled the process
+    elif qr.res_code == -1: # User canceled the process
         return
     elif qr.res_code in (SQLITE_INTERNAL, SQLITE_NOTFOUND):
         raise InternalError(qr.err_msg)

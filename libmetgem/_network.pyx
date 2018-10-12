@@ -45,7 +45,7 @@ cdef bool compareInteractionsByCosine(const interaction_t &a, const interaction_
  
 @cython.boundscheck(False)
 @cython.wraparound(False)
-cdef vector[interaction_t] generate_network_nogil(float[:,:] scores_matrix,
+cdef vector[interaction_t] generate_network_nogil(const float[:,:] scores_matrix,
                                                   vector[double] mzvec,
                                                   double pairs_min_cosine,
                                                   int top_k,
@@ -53,7 +53,7 @@ cdef vector[interaction_t] generate_network_nogil(float[:,:] scores_matrix,
     cdef:
         vector[interaction_t] interactions, interactions2
         interaction_t inter
-        int size = mzvec.size()
+        int size = min(scores_matrix.shape[0], mzvec.size())
         int i, j
         vector[element_t] row
         element_t element
@@ -63,20 +63,24 @@ cdef vector[interaction_t] generate_network_nogil(float[:,:] scores_matrix,
         vector[int] x_ind, y_ind
         bool flag
         bool has_callback = callback is not None
-    
+      
     for i in range(size):
         row.clear()
         row.reserve(size-i+1)
         for j in range(i, size):
             cosine = scores_matrix[i, j]
-            if cosine > pairs_min_cosine:
+            if cosine > pairs_min_cosine >= 0:
                 element.index = j
                 element.cosine = cosine
                 row.push_back(element)
                 
-        length = min(row.size(), top_k)
-        partial_sort(row.begin(), row.begin() + length,
-                     row.end(), compareElementsByCosine)
+        if top_k > 0:
+            length = min(row.size(), top_k)
+            partial_sort(row.begin(), row.begin() + length,
+                         row.end(), compareElementsByCosine)
+        else:
+            length = row.size()
+            sort(row.begin(), row.end(), compareElementsByCosine)
         
         for j in range(length):
             element = row[j]
@@ -117,8 +121,9 @@ cdef vector[interaction_t] generate_network_nogil(float[:,:] scores_matrix,
             if interactions[j].source == y or interactions[j].target == y:
                 y_ind.push_back(j)
 
-        x_ind.resize(min(top_k, x_ind.size()))
-        y_ind.resize(min(top_k, y_ind.size()))
+        if top_k > 0:
+            x_ind.resize(min(top_k, x_ind.size()))
+            y_ind.resize(min(top_k, y_ind.size()))
                 
         flag = False
         for j in y_ind:
@@ -142,7 +147,8 @@ cdef vector[interaction_t] generate_network_nogil(float[:,:] scores_matrix,
             
     return interactions2
     
-def generate_network(float[:,:] scores_matrix, vector[double] mzvec,
+    
+def generate_network(const float[:,:] scores_matrix, vector[double] mzvec,
                      double pairs_min_cosine, int top_k, object callback=None):
     cdef:
         vector[interaction_t] interactions
@@ -157,11 +163,10 @@ def generate_network(float[:,:] scores_matrix, vector[double] mzvec,
     interactions = generate_network_nogil(scores_matrix, mzvec,
                                           pairs_min_cosine, top_k,
                                           callback)
-    if interactions.size() > 0:
-        array = np.empty((interactions.size(),), dtype=dt)
-        for i in range(array.shape[0]):
-            inter = interactions[i]
-            array[i] = (inter.source, inter.target, inter.delta_mz, inter.cosine)
-            
-        return array
+    array = np.empty((interactions.size(),), dtype=dt)
+    for i in range(array.shape[0]):
+        inter = interactions[i]
+        array[i] = (inter.source, inter.target, inter.delta_mz, inter.cosine)
+        
+    return array
         

@@ -1,6 +1,7 @@
 # cython: language_level=3
 # distutils: language=c++
 
+import numpy as np
 cimport numpy as np
 cimport cython
 from cython.view cimport array as cvarray
@@ -26,7 +27,6 @@ cdef float[:,:] arr_from_vector(vector[peak_t] v):
 @cython.boundscheck(False)
 @cython.wraparound(False)
 cdef peak_t *np_arr_pointer(np.ndarray[np.float32_t, ndim=2] data):
-    if data.strides[0] < 0:
-        return <peak_t *>&data[data.shape[0] - 1, 0]
-    else:
-        return <peak_t *>&data[0, 0]
+    cdef np.ndarray[np.float32_t, ndim=2] new_data
+    new_data = np.ascontiguousarray(data, dtype=data.dtype)
+    return <peak_t *>&new_data[0, 0]

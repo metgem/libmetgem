@@ -1,0 +1,82 @@
+"""
+Test `libmetgem.cosine.compute_distance_matrix`.
+"""
+
+import pytest
+import numpy as np
+
+from libmetgem.cosine import compute_distance_matrix
+
+from data import matrix, random_spectra, mz_tolerance, min_matched_peaks
+
+
+def test_matrix_shape(matrix):
+    """`compute_distance_matrix` should always return 2D matrices.
+    """
+    
+    assert len(matrix.shape) == 2
+
+
+def test_matrix_square(matrix):
+    """`compute_distance_matrix` should always return square matrices.
+    """
+    
+    assert matrix.shape[0] == matrix.shape[1]
+
+
+def test_matrix_diag(matrix):
+    """`compute_distance_matrix` should always return matrices with diagonal
+        full of 1.
+    """
+        
+    diag = np.diag(matrix)
+    assert np.count_nonzero(diag-1) == 0
+
+
+def test_matrix_symmetric(matrix):
+    """`compute_distance_matrix` should always return symmetric matrices.
+    """
+    
+    assert matrix == pytest.approx(matrix.T)
+    
+
+def test_matrix_max(matrix):
+    """`compute_distance_matrix` returned matrices should not have values
+        upper than 1.
+    """
+        
+    assert matrix.max() == 1
+
+
+def test_matrix_min(matrix):
+    """`compute_distance_matrix` returned matrices should not have values
+        lower than 0.
+    """
+        
+    assert matrix.min() >= 0
+    
+    
+def test_matrix_dtype(matrix):
+    """`compute_distance_matrix` returned matrices should have dtype np.float32
+    """
+        
+    assert matrix.dtype == np.float32
+
+    
+@pytest.mark.python
+@pytest.mark.skipif(getattr(compute_distance_matrix, '__wrapped__', None) is None,
+                    reason="libmetgem should be cythonized")
+def test_matrix_python_cython(random_spectra, mz_tolerance, min_matched_peaks):
+    """Cythonized `compute_distance_matrix` and it's fallback Python version
+        should give the same results.
+    """
+    
+    mzs, spectra = random_spectra
+    
+    matrix_p = compute_distance_matrix.__wrapped__(mzs, spectra,
+                                                   mz_tolerance,
+                                                   min_matched_peaks)
+    matrix_c = compute_distance_matrix(mzs, spectra,
+                                       mz_tolerance,
+                                       min_matched_peaks)
+    assert pytest.approx(matrix_p) == matrix_c
