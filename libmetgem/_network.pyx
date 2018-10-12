@@ -1,5 +1,7 @@
 # cython: language_level=3
+# cython: linetrace=True
 # distutils: language=c++
+
 
 cimport cython
 import numpy as np
