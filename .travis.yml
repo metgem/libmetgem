@@ -18,10 +18,10 @@ os:
 sudo: false
 
 cache:
-  directories:
-    - $HOME/download # Sufficient to add miniconda.sh to TRAVIS cache.
-    - $HOME/miniconda # Add the installation to TRAVIS cache.
-    
+    directories:
+        - $HOME/download # Sufficient to add miniconda.sh to TRAVIS cache.
+        - $HOME/miniconda # Add the installation to TRAVIS cache.
+        
 before_cache:
     - if ! [[ $TRAVIS_TAG ]]; then rm -rf $HOME/miniconda/conda-bld; fi
     - rm -rf $HOME/miniconda/locks $HOME/miniconda/pkgs $HOME/miniconda/var $HOME/miniconda/conda-meta/history
@@ -40,14 +40,14 @@ before_install:
           wget https://repo.continuum.io/miniconda/Miniconda3-latest-MacOSX-x86_64.sh -O $HOME/download/miniconda.sh;
         fi;
         bash $HOME/download/miniconda.sh -b -p $HOME/miniconda;
-      fi
+      fi;
+    # Since default gcc on osx is just a front-end for LLVM
     - if [ "${TRAVIS_OS_NAME}" = "osx" ]; then
-        # Since default gcc on osx is just a front-end for LLVM
         if [ "${CC}" = "gcc" ]; then
-            export CXX=g++-4.8
-            export CC=gcc-4.8
-        fi
-      fi
+            export CXX=g++-4.8;
+            export CC=gcc-4.8;
+        fi;
+      fi;
     
 install:
     - export PATH="$HOME/miniconda/bin:$PATH"
