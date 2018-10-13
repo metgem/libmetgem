@@ -50,7 +50,8 @@ install:
     - conda config --set always_yes yes
     #- conda config --add channels metgem
         
-    - conda create -q -n test-env python=${MYCONDAPY} --force
+    - conda remove --name test-env --all
+    - conda create -q -n test-env python=${MYCONDAPY}
     - source activate test-env
     
     - conda install -q conda conda-build conda-verify anaconda-client numpy setuptools cython
