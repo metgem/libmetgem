@@ -40,7 +40,14 @@ before_install:
           wget https://repo.continuum.io/miniconda/Miniconda3-latest-MacOSX-x86_64.sh -O $HOME/download/miniconda.sh;
         fi;
         bash $HOME/download/miniconda.sh -b -p $HOME/miniconda;
-      fi;
+      fi
+    - if [ "${TRAVIS_OS_NAME}" = "osx" ]; then
+        # Since default gcc on osx is just a front-end for LLVM
+        if [ "${CC}" = "gcc" ]; then
+            export CXX=g++-4.8
+            export CC=gcc-4.8
+        fi
+      fi
     
 install:
     - export PATH="$HOME/miniconda/bin:$PATH"
@@ -66,7 +73,7 @@ script:
     # Make CPP and PY source package for github deployment
     - if [[ $TRAVIS_TAG ]]; then
         python setup.py sdist;
-        fi
+      fi
         
 after_success:
     # Upload the coverage analysis
