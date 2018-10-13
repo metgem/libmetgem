@@ -67,7 +67,7 @@ def query(fname: str, indices: List[int], mzvec: List[float],
 
     size = len(mzvec)
 
-    conn = sqlite3.connect(f'file:{fname}?mode=ro', uri=True)
+    conn = sqlite3.connect('file:{}?mode=ro'.format(fname), uri=True)
 
     # Get min/max mz values in list
     mz_min = min(mzvec)

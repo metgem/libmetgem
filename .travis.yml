@@ -55,7 +55,7 @@ install:
     - source activate test-env
     
     - conda install -q conda conda-build conda-verify anaconda-client numpy setuptools cython
-    - pip install pytest pylint pytest-pylint pytest-cov codecov
+    - pip install pyteomics pytest pylint pytest-pylint pytest-cov codecov
     
 script:
     - python setup.py build_ext -i --define CYTHON_TRACE_NOGIL
