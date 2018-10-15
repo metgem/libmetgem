@@ -43,7 +43,7 @@ before_install:
         bash $HOME/download/miniconda.sh -b -p $HOME/miniconda;
       fi;
     - if [ "${TRAVIS_OS_NAME}" = "osx" ]; then
-        brew install gcc8 && CC=gcc-8 && CXX=g++-8
+        brew install gcc8 && CC=gcc-8 && CXX=g++-8;
       fi;
     
 install:
