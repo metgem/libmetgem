@@ -16,8 +16,7 @@ from data import (random_spectra,
                   mz_tolerance, min_matched_peaks, min_intensity,
                   parent_filter_tolerance, matched_peaks_window,
                   min_matched_peaks_search)
-
-                  
+                 
 @pytest.fixture(scope="session")
 def db(tmpdir_factory, random_spectra, request):
     """Creates a database with randomly generated spectra inside.

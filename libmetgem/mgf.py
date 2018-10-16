@@ -30,13 +30,17 @@ def read(filename: str, ignore_unknown: bool=False) -> Tuple[dict, np.ndarray]:
     
     """
     from pyteomics import mgf
+    from pyteomics.auxiliary import PyteomicsError
     
-    for entry in mgf.read(filename, convert_arrays=1, read_charges=True, dtype=np.float32):
-        params = entry.get('params', {})
-        for key in ('pepmass', 'charge'):
-            if key in params and isinstance(params[key], (list, tuple)):
-                params[key] = params[key][0]
+    try:
+        for entry in mgf.read(filename, convert_arrays=1, read_charges=True, dtype=np.float32):
+            params = entry.get('params', {})
+            for key in ('pepmass', 'charge'):
+                if key in params and isinstance(params[key], (list, tuple)):
+                    params[key] = params[key][0]
 
-        mz = entry.get('m/z array', None)
-        intensity = entry.get('intensity array', None)
-        yield params, np.column_stack((mz, intensity))
+            mz = entry.get('m/z array', None)
+            intensity = entry.get('intensity array', None)
+            yield params, np.column_stack((mz, intensity))
+    except PyteomicsError:
+        pass

@@ -57,7 +57,10 @@ def test_mgf_data_comma(invalid_mgf, ignore_unknown):
             assert data[:, MZ] == pytest.approx(spectra[i][:, MZ], abs=1)
             assert np.count_nonzero(data[:, INTENSITY]) == 0
 
-        
+
+@pytest.mark.python
+@pytest.mark.skipif(getattr(read_mgf, '__wrapped__', None) is None,
+                    reason="libmetgem should be cythonized")            
 @pytest.mark.parametrize('ignore_unknown', [True, False])
 def test_mgf_ignore_unknown(valid_mgf, ignore_unknown):
     """`ignore_unknown` parameter should never ignore pepmass.

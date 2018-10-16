@@ -47,7 +47,7 @@ def generate_network(scores_matrix: np.ndarray, mzs: List[float],
     interactions = []
     size = min(scores_matrix.shape[0], len(mzs))
 
-    triu = np.triu(scores_matrix)
+    triu = np.triu(scores_matrix)[:size,:size]
     triu[triu <= max(0, pairs_min_cosine)] = 0
     for i in range(size):
         # indexes = np.argpartition(triu[i,], -top_k)[-top_k:] # Should be faster and give the same results

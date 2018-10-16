@@ -119,8 +119,11 @@ def test_filter_data_parent(random_spectrum, parent_filter_tolerance):
         assert filtered.shape < data.shape
     
     for mz in filtered[:, MZ]:
-        assert mz<=parent-parent_filter_tolerance \
-               or mz>=parent+parent_filter_tolerance
+        assert mz<parent-parent_filter_tolerance \
+               or mz == pytest.approx(parent-parent_filter_tolerance) \
+               or mz>parent+parent_filter_tolerance \
+               or mz == pytest.approx(parent+parent_filter_tolerance)
+               
                
                
 @pytest.mark.parametrize("min_intensity", [0, 10, 100, 101, 200])

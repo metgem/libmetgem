@@ -67,7 +67,7 @@ def test_generate_network_list_larger_than_matrix(random_matrix):
     mzs = mzs + [1200.14225, 258.4475]
     max_index = len(mzs)
     
-    interactions = generate_network.__wrapped__(matrix, mzs, 0, 10)
+    interactions = generate_network(matrix, mzs, 0, 10)
     
     assert max_index-1 not in interactions['Source']
     assert max_index-1 not in interactions['Target']
