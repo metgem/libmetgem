@@ -185,7 +185,6 @@ ENV/
 *.npy
 *.ipynb
 build/
-austrob/
-stilingia/
 *.mgf
 *.csv
+libmetgem/_version.py
