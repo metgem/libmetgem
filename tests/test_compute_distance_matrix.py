@@ -5,6 +5,7 @@ Test `libmetgem.cosine.compute_distance_matrix`.
 import pytest
 import numpy as np
 
+from libmetgem import IS_CYTHONIZED
 from libmetgem.cosine import compute_distance_matrix
 
 from data import matrix, random_spectra, mz_tolerance, min_matched_peaks
@@ -64,8 +65,7 @@ def test_matrix_dtype(matrix):
 
     
 @pytest.mark.python
-@pytest.mark.skipif(getattr(compute_distance_matrix, '__wrapped__', None) is None,
-                    reason="libmetgem should be cythonized")
+@pytest.mark.skipif(not IS_CYTHONIZED, reason="libmetgem should be cythonized")
 def test_matrix_python_cython(random_spectra, mz_tolerance, min_matched_peaks):
     """Cythonized `compute_distance_matrix` and it's fallback Python version
         should give the same results.

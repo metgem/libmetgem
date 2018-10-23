@@ -5,8 +5,9 @@ Test `libmetgem.filter.filter_data`.
 import pytest
 import numpy as np
 
-from libmetgem.common import MZ, INTENSITY
+from libmetgem import IS_CYTHONIZED, MZ, INTENSITY
 from libmetgem.filter import filter_data
+
 
 from data import (random_spectrum, known_spectrum_filter_comparison,
                   min_intensity, parent_filter_tolerance,
@@ -208,8 +209,7 @@ def test_filter_data_reversed(random_spectrum, min_intensity,
             
 
 @pytest.mark.python            
-@pytest.mark.skipif(getattr(filter_data, '__wrapped__', None) is None,
-                    reason="libmetgem should be cythonized")
+@pytest.mark.skipif(not IS_CYTHONIZED, reason="libmetgem should be cythonized")
 def test_filter_data_python_cython(random_spectrum, min_intensity,
                   parent_filter_tolerance, matched_peaks_window,
                   min_matched_peaks_search):

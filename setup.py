@@ -95,6 +95,19 @@ if sys.platform == "win32":
     OPENMP_FLAGS = "/openmp"
 else:
     OPENMP_FLAGS = "-fopenmp"
+    
+# enable coverage by building cython file by running build_ext with
+# `--with-cython-coverage` enabled
+linetrace = False
+if '--with-cython-coverage' in sys.argv:
+    linetrace = True
+    sys.argv.remove('--with-cython-coverage')
+
+directives = {'embedsignature': True, 'linetrace': False}
+macros = []
+if linetrace:
+    directives['linetrace'] = True
+    macros = [('CYTHON_TRACE', '1'), ('CYTHON_TRACE_NOGIL', '1')]
      
 if HAS_CYTHON:
     ext_modules = [
@@ -128,11 +141,13 @@ if HAS_CYTHON:
                 [os.path.join(SRC_PATH, "_network.pyx")]
             )
         ]
-    ext_modules = cythonize(ext_modules,
-                            compile_time_env={'WIN32': sys.platform == 'win32'})
-
+    
     for e in ext_modules:
-        e.cython_directives = {"embedsignature": True}
+        e.define_macros.extend(macros)
+        
+    ext_modules = cythonize(ext_modules,
+                            compile_time_env={'WIN32': sys.platform == 'win32'},
+                            compiler_directives=directives)
         
     install_requires = ["numpy"]
     setup_requires = ["cython>=0.28"] # Need Cython>=0.28 for read-only memoryview

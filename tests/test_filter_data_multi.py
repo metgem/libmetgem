@@ -5,7 +5,7 @@ Test `libmetgem.filter.filter_data_multi`.
 import pytest
 import numpy as np
 
-from libmetgem.common import MZ, INTENSITY
+from libmetgem import IS_CYTHONIZED, MZ, INTENSITY
 from libmetgem.filter import filter_data_multi
 
 from data import (random_spectra, known_spectra_filter_comparison,
@@ -29,8 +29,7 @@ def test_filter_data_multi_known(known_spectra_filter_comparison,
         
 
 @pytest.mark.python
-@pytest.mark.skipif(getattr(filter_data_multi, '__wrapped__', None) is None,
-                    reason="libmetgem should be cythonized")
+@pytest.mark.skipif(not IS_CYTHONIZED, reason="libmetgem should be cythonized")
 def test_filter_data_multi_python_cython(random_spectra,
                 min_intensity, parent_filter_tolerance,
                 matched_peaks_window, min_matched_peaks_search):

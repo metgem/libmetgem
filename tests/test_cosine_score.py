@@ -5,7 +5,9 @@ Test `libmetgem.cosine.cosine_score`
 import pytest
 import numpy as np
 
+from libmetgem import IS_CYTHONIZED
 from libmetgem.cosine import cosine_score
+
 
 from data import (known_cosines, random_spectrum, another_random_spectrum,
                   mz_tolerance, min_matched_peaks)
@@ -62,8 +64,7 @@ def test_cosine_score_swapped(random_spectrum, another_random_spectrum,
 
 
 @pytest.mark.python
-@pytest.mark.skipif(getattr(cosine_score, '__wrapped__', None) is None,
-                    reason="libmetgem should be cythonized")
+@pytest.mark.skipif(not IS_CYTHONIZED, reason="libmetgem should be cythonized")
 @pytest.mark.parametrize("random_spectrum", range(4), indirect=True)
 @pytest.mark.parametrize("another_random_spectrum", range(4), indirect=True)
 def test_cosine_score_python_cython(random_spectrum, another_random_spectrum,

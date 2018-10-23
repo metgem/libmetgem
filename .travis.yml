@@ -65,10 +65,10 @@ install:
     - pip install pyteomics pytest pylint pytest-pylint pytest-cov codecov
     
 script:
-    - python setup.py build_ext -i --define CYTHON_TRACE_NOGIL
-    - python setup.py install
+    - python setup.py build_ext --inplace --with-cython-coverage --force
+    - python setup.py develop
     - pytest --pylint --pylint-rcfile=.pyrcfile --pylint-error-types=EF libmetgem
-    - cd tests;pytest --cov=libmetgem
+    - pytest tests --cov=libmetgem
     
     # Make CPP and PY source package for github deployment
     - if [[ $TRAVIS_TAG ]]; then

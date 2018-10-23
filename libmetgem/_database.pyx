@@ -31,8 +31,6 @@ ctypedef struct query_result_t:
     char err_msg[48]
     unordered_map[int, vector[db_result_t]] results
     
-ctypedef const char * const_char_p_t
-
 IF WIN32:
     DEF CHARSET = "mbcs"
 ELSE:
@@ -61,30 +59,10 @@ cdef extern from 'sqlite3.h' nogil:
     int sqlite3_close(sqlite3*)
     int sqlite3_open_v2(const_char *filename, sqlite3 **ppDb,
                         int flags, const_char *zVfs)
-    int sqlite3_create_function(sqlite3 *db, const char *zFunctionName,
-                        int nArg, int eTextRep, void *pApp,
-                        void (*xFunc)(sqlite3_context*,int,sqlite3_value**),
-                        void (*xStep)(sqlite3_context*,int,sqlite3_value**),
-                        void (*xFinal)(sqlite3_context*))
-    void *sqlite3_user_data(sqlite3_context*)
-    const unsigned char *sqlite3_value_text(sqlite3_value*)
-    double sqlite3_value_double(sqlite3_value*)
-    const void *sqlite3_value_blob(sqlite3_value*)
-    int sqlite3_value_bytes(sqlite3_value*)
-    double sqlite3_value_double(sqlite3_value*)
-    int sqlite3_value_int(sqlite3_value*)
-    void sqlite3_result_text(sqlite3_context*, const char*, int, void(*)(void*))
-    void sqlite3_result_int64(sqlite3_context*, sqlite3_int64)
-    void sqlite3_result_int(sqlite3_context*, int)
-    void sqlite3_result_null(sqlite3_context*)
-    void sqlite3_result_double(sqlite3_context*, double)
-    void sqlite3_result_blob(sqlite3_context*, const void*, int, void(*)(void*))
     int sqlite3_bind_double(sqlite3_stmt*, int, double)
     int sqlite3_bind_int(sqlite3_stmt*, int, int)
     int sqlite3_bind_text(sqlite3_stmt*,int,const char*,int,void(*)(void*))
-    int sqlite3_limit(sqlite3*, int id, int newVal)
     int sqlite3_extended_result_codes(sqlite3*, int onoff)
-    const char *sqlite3_errmsg(sqlite3*)
     int sqlite3_reset(sqlite3_stmt *pStmt)
     
     enum:

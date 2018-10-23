@@ -7,10 +7,11 @@ import numpy as np
 import sqlite3
 import os
 
-from libmetgem import MZ, INTENSITY
-from libmetgem.database import query
+from libmetgem import IS_CYTHONIZED, MZ, INTENSITY
 from libmetgem.filter import filter_data
 from libmetgem.cosine import cosine_score
+from libmetgem.database import query
+    
 
 from data import (random_spectra,
                   mz_tolerance, min_matched_peaks, min_intensity,
@@ -107,8 +108,7 @@ def test_query_analog(db):
         
 @pytest.mark.slow
 @pytest.mark.python
-@pytest.mark.skipif(getattr(query, '__wrapped__', None) is None,
-                    reason="libmetgem should be cythonized")
+@pytest.mark.skipif(not IS_CYTHONIZED, reason="libmetgem should be cythonized")
 def test_query_python_cython(db):
     """Cythonized `query` and it's fallback Python version should give the same
        results.

@@ -5,6 +5,7 @@ Test `libmetgem.network.generate_network`
 import pytest
 import numpy as np
 
+from libmetgem import IS_CYTHONIZED
 from libmetgem.network import generate_network
 
 from data import (matrix, random_matrix,
@@ -176,8 +177,7 @@ def test_generate_network_pairs_min_cosine(random_matrix,
     
 @pytest.mark.slow
 @pytest.mark.python
-@pytest.mark.skipif(getattr(generate_network, '__wrapped__', None) is None,
-                    reason="libmetgem should be cythonized")
+@pytest.mark.skipif(not IS_CYTHONIZED, reason="libmetgem should be cythonized")
 def test_generate_network_python_cython(random_matrix,
                               pairs_min_cosine, top_k):
     """Cythonized `generate_network` and it's fallback Python version should

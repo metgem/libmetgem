@@ -5,7 +5,8 @@ Test `libmetgem.mgf` module
 import pytest
 import numpy as np
 
-from libmetgem.common import MZ, INTENSITY
+
+from libmetgem import IS_CYTHONIZED, MZ, INTENSITY
 from libmetgem.mgf import read as read_mgf
 
 from data import valid_mgf, invalid_mgf, empty_mgf
@@ -111,8 +112,7 @@ def test_mgf_invalid(invalid_mgf, ignore_unknown):
             
 
 @pytest.mark.python
-@pytest.mark.skipif(getattr(read_mgf, '__wrapped__', None) is None,
-                    reason="libmetgem should be cythonized")
+@pytest.mark.skipif(not IS_CYTHONIZED, reason="libmetgem should be cythonized")
 def test_mgf_python_cython(valid_mgf):
     """Cythonized `read_mgf` and it's fallback Python version should give the
        same results.
