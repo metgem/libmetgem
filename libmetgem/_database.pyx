@@ -174,7 +174,7 @@ cdef query_result_t query_nogil(char *fname, vector[int] indices,
         int blob_size
         int size = mzvec.size()
         char query[648]
-        char dbs[512]
+        char dbs[2048]
         double cosine_mz_tolerance, score
         int i
         int ret
@@ -217,7 +217,7 @@ cdef query_result_t query_nogil(char *fname, vector[int] indices,
             ret += sprintf(dbs+ret, "%d,", bank_id)
         dbs[ret-1] = b'\0'
 
-        ret = sqlite3_prepare_v2(db, "SELECT id, pepmass, name, peaks, bank_id FROM spectra WHERE bank_id IN ?4 AND (positive = ?1 OR positive IS NULL) AND PEPMASS BETWEEN ?2 AND ?3", -1, &stmt, NULL)
+        ret = sqlite3_prepare_v2(db, "SELECT id, pepmass, name, peaks, bank_id FROM spectra WHERE bank_id IN (?4) AND (positive = ?1 OR positive IS NULL) AND PEPMASS BETWEEN ?2 AND ?3", -1, &stmt, NULL)
         sqlite3_bind_text(stmt, 4, dbs, -1, NULL)
     else:
         ret = sqlite3_prepare_v2(db, "SELECT id, pepmass, name, peaks, bank_id FROM spectra WHERE (positive = ?1 OR positive IS NULL) AND PEPMASS BETWEEN ?2 AND ?3", -1, &stmt, NULL)
