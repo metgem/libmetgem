@@ -15,7 +15,7 @@ __all__ = ('known_filtered_spectrum', 'known_spectrum'
            'min_intensity', 'parent_filter_tolerance',
            'matched_peaks_window', 'min_matched_peaks_search',
            'pairs_min_cosine', 'top_k',
-           'valid_mgf', 'invalid_mgf', 'empty_mgf',
+           'valid_mgf', 'invalid_mgf', 'empty_mgf', 'noions_mgf',
            'matrix', 'random_matrix')
 
 MZ_TOLERANCES = (0.02, 0.05, 1.0)
@@ -233,6 +233,19 @@ def empty_mgf(tmpdir_factory):
         
     p = tmpdir_factory.mktemp("empty").join("empty.mgf")
     p.write("")
+    return p
+    
+    
+@pytest.fixture(scope="session")
+def noions_mgf(tmpdir_factory):
+    """Creates a mgf file with an entry where ions are missing"""
+    
+    p = tmpdir_factory.mktemp("noions").join("noions.mgf")
+    content = ["BEGIN IONS\n",
+               "PEPMASS=415.2986\n",
+               "END IONS\n"]
+    p.write("\n".join(content))
+    
     return p
     
     

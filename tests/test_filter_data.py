@@ -206,7 +206,18 @@ def test_filter_data_reversed(random_spectrum, min_intensity,
                   min_matched_peaks_search), axis=0)
     
     assert filtered == pytest.approx(filtered_r)
-            
+    
+    
+def test_filter_data_empty(min_intensity, parent_filter_tolerance,
+                           matched_peaks_window, min_matched_peaks_search):
+    
+    parent = 152.569
+    data = np.empty((0, 2), dtype=np.float32)
+    
+    filtered = filter_data(parent, data, min_intensity,
+                  parent_filter_tolerance, matched_peaks_window,
+                  min_matched_peaks_search)
+    assert filtered.size == 0
 
 @pytest.mark.python            
 @pytest.mark.skipif(not IS_CYTHONIZED, reason="libmetgem should be cythonized")

@@ -16,7 +16,9 @@ from ._common cimport peak_t, arr_from_vector
 
 DEF MZ = 0
 DEF INTENSITY = 1
-DEF MAX_LINE_SIZE = 131 # 128 characters + '\r\n' + '\0'
+DEF MAX_KEY_SIZE = 64
+DEF MAX_VALUE_SIZE = 2048
+DEF MAX_LINE_SIZE = 2051 # 2048 characters + '\r\n' + '\0'
 
 cdef extern from "<string.h>" nogil:
     char *strchr (char *string, int c)
@@ -88,8 +90,8 @@ cdef tuple read_entry(FILE * fp, bint ignore_unknown=False):
         vector[peak_t] peaklist
         int charge
         size_t pos
-        char key[32]
-        char value[1024]
+        char key[MAX_KEY_SIZE]
+        char value[MAX_VALUE_SIZE]
         
     
     while fgets(line, MAX_LINE_SIZE, fp) != NULL:
@@ -128,13 +130,13 @@ cdef tuple read_entry(FILE * fp, bint ignore_unknown=False):
                         break
                     if fgets(line, MAX_LINE_SIZE, fp) == NULL:
                         break
-                return params, np.empty((0,0), dtype=np.float32)
+                return params, np.empty((0, 2), dtype=np.float32)
             else:
                 read_data(line, &peaklist, fp)
                 if peaklist.size() > 0:
                     return params, np.asarray(arr_from_vector(peaklist))
                 else:
-                    return params, np.empty((0,0), dtype=np.float32)
+                    return params, np.empty((0, 2), dtype=np.float32)
                 
 
 def read(str filename, bint ignore_unknown=False):

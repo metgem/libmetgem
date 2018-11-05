@@ -9,7 +9,7 @@ import numpy as np
 from libmetgem import IS_CYTHONIZED, MZ, INTENSITY
 from libmetgem.mgf import read as read_mgf
 
-from data import valid_mgf, invalid_mgf, empty_mgf
+from data import valid_mgf, invalid_mgf, empty_mgf, noions_mgf
   
     
 @pytest.mark.parametrize('ignore_unknown', [True, False])
@@ -109,6 +109,19 @@ def test_mgf_invalid(invalid_mgf, ignore_unknown):
     for i, (params, data) in enumerate(gen):
         if i == 2:
             assert 'pepmass' not in params
+            
+            
+@pytest.mark.parametrize('ignore_unknown', [True, False])
+def test_mgf_noions(noions_mgf, ignore_unknown):
+    """A mgf file with only one entry where there is no ions should not throw an
+       error.
+    """
+       
+    data = list(read_mgf(str(noions_mgf), ignore_unknown=ignore_unknown))
+    assert isinstance(data, list)
+    assert len(data) == 1
+    assert data[0][1].size == 0
+    assert data[0][1].shape == (0, 2)
             
 
 @pytest.mark.python
