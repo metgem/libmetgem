@@ -77,11 +77,11 @@ def query(fname: str, indices: List[int], mzvec: List[float],
     tol = analog_mz_tolerance if analog_mz_tolerance > 0 else mz_tolerance
 
     if len(databases) > 0:
-        dbs = ','.join([str(x) for x in databases])
-        c = conn.execute("SELECT id, pepmass, name, peaks, bank_id FROM spectra WHERE bank_id IN (?4) AND (positive = ?1 OR positive IS NULL) AND PEPMASS BETWEEN ?2 AND ?3",
-                         (positive_polarity, mz_min-tol, mz_max+tol, dbs))
+        dbs = ','.join(['?' for _ in databases])
+        c = conn.execute("SELECT id, pepmass, name, peaks, bank_id FROM spectra WHERE bank_id IN ({}) AND (positive = ? OR positive IS NULL) AND PEPMASS BETWEEN ? AND ?".format(dbs),
+                         (*databases, positive_polarity, mz_min-tol, mz_max+tol))
     else:
-        c = conn.execute("SELECT id, pepmass, name, peaks, bank_id FROM spectra WHERE (positive = ?1 OR positive IS NULL) AND PEPMASS BETWEEN ?2 AND ?3",
+        c = conn.execute("SELECT id, pepmass, name, peaks, bank_id FROM spectra WHERE (positive = ? OR positive IS NULL) AND PEPMASS BETWEEN ? AND ?",
                          (positive_polarity, mz_min-tol, mz_max+tol))
 
     results = c.fetchall()

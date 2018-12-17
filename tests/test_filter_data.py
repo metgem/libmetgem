@@ -22,7 +22,7 @@ def test_filter_data_known(known_spectrum_filter_comparison):
      
     expected = np.sort(expected, axis=0)
     filtered = np.sort(filter_data(parent, data, 0, 17, 50, 6), axis=0)
-    
+       
     assert filtered == pytest.approx(expected)
     
     

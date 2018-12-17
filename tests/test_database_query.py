@@ -41,7 +41,10 @@ def db(tmpdir_factory, random_spectra, request):
     q = """INSERT INTO spectra (id, bank_id, pepmass, name, positive, peaks)
            VALUES (?, ?, ?, ?, ?, ?)"""
     for i in range(len(mzs)):
-        c.execute(q, (i, 1, mzs[i], "spec" + str(i), True,
+        c.execute(q, (i, 0, mzs[i], "spec" + str(i), True,
+                  spectra[i].tobytes(order='C')))
+        if i%2:
+            c.execute(q, (len(mzs)+i, 1, mzs[i], "spec" + str(i), True,
                       spectra[i].tobytes(order='C')))
         
     conn.commit()
@@ -73,6 +76,41 @@ def test_query_random_spectra(db):
                 assert pytest.approx(r['score']) == 1.0
         assert seen_i
         
+        
+@pytest.mark.parametrize('bank', [[0], [1], [0, 1]])
+def test_query_in_bank(db, bank):
+    """Test if looking for a spectra in a specific bank that is for sure in
+       database will successfully returns this spectra.
+    """
+    
+    p, (mzs, spectra) = db
+    
+    for i, (mz, data) in enumerate(zip(mzs, spectra)):
+        filtered = filter_data(mz, data, 0, 17, 50, 6)
+        results = query(str(p), [i], [mz], [filtered], bank,
+                        0.02, 0, 0, 17, 50, 6, 0.)
+        ids = []
+        if 0 in bank:
+            ids.append(i)
+        if 1 in bank and i%2:
+            ids.append(len(mzs)+i)
+            
+        for id in ids:
+            if 0 in bank or (1 in bank and i%2):
+                assert i in results
+                seen_i = False
+                for r in results[i]:
+                    assert 'id' in r
+                    assert 'bank_id' in r
+                    assert 'name' in r
+                    assert 'score' in r
+                    
+                    if r['id'] == id:
+                        seen_i = True
+                        assert pytest.approx(r['score']) == 1.0
+                assert seen_i
+            else:
+                assert id not in results
 
 def test_query_analog(db):
     """Build an analog and try to find the original spectrum in the database.

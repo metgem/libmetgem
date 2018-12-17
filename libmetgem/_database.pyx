@@ -173,8 +173,7 @@ cdef query_result_t query_nogil(char *fname, vector[int] indices,
         const peak_t *blob
         int blob_size
         int size = mzvec.size()
-        char query[648]
-        char dbs[2048]
+        char query[4096]
         double cosine_mz_tolerance, score
         int i
         int ret
@@ -186,6 +185,8 @@ cdef query_result_t query_nogil(char *fname, vector[int] indices,
         vector[int] ids
         int rows = 0, max_rows = 0
         clock_t t
+        char dbs[2048]
+        int num_dbs
               
     # Open database
     ret = sqlite3_open_v2(fname, &db, SQLITE_OPEN_READONLY, NULL)
@@ -210,25 +211,30 @@ cdef query_result_t query_nogil(char *fname, vector[int] indices,
             mz_max = mzvec[i]
                
     # Prepare SQL query
-    if databases.size() > 0:
+    num_dbs = databases.size()
+    if num_dbs > 0:
         # Filter databases
         ret = 0
         for bank_id in databases:
-            ret += sprintf(dbs+ret, "%d,", bank_id)
+            dbs[ret] = b'?'
+            dbs[ret+1] = b','
+            ret += 2
         dbs[ret-1] = b'\0'
+        sprintf(query, "SELECT id, pepmass, name, peaks, bank_id FROM spectra WHERE bank_id IN (%s) AND (positive = ? OR positive IS NULL) AND PEPMASS BETWEEN ? AND ?", dbs)
 
-        ret = sqlite3_prepare_v2(db, "SELECT id, pepmass, name, peaks, bank_id FROM spectra WHERE bank_id IN (?4) AND (positive = ?1 OR positive IS NULL) AND PEPMASS BETWEEN ?2 AND ?3", -1, &stmt, NULL)
-        sqlite3_bind_text(stmt, 4, dbs, -1, NULL)
+        ret = sqlite3_prepare_v2(db, query, -1, &stmt, NULL)
+        for i in range(num_dbs):
+            sqlite3_bind_int(stmt, i+1, databases[i])
     else:
-        ret = sqlite3_prepare_v2(db, "SELECT id, pepmass, name, peaks, bank_id FROM spectra WHERE (positive = ?1 OR positive IS NULL) AND PEPMASS BETWEEN ?2 AND ?3", -1, &stmt, NULL)
+        ret = sqlite3_prepare_v2(db, "SELECT id, pepmass, name, peaks, bank_id FROM spectra WHERE (positive = ? OR positive IS NULL) AND PEPMASS BETWEEN ? AND ?", -1, &stmt, NULL)
 
-    sqlite3_bind_int(stmt, 1, positive_polarity)
+    sqlite3_bind_int(stmt, num_dbs+1, positive_polarity)
     if analog_mz_tolerance > 0:
-        sqlite3_bind_double(stmt, 2, mz_min-analog_mz_tolerance)
-        sqlite3_bind_double(stmt, 3, mz_max+analog_mz_tolerance)
+        sqlite3_bind_double(stmt, num_dbs+2, mz_min-analog_mz_tolerance)
+        sqlite3_bind_double(stmt, num_dbs+3, mz_max+analog_mz_tolerance)
     else:
-        sqlite3_bind_double(stmt, 2, mz_min-mz_tolerance)
-        sqlite3_bind_double(stmt, 3, mz_max+mz_tolerance)
+        sqlite3_bind_double(stmt, num_dbs+2, mz_min-mz_tolerance)
+        sqlite3_bind_double(stmt, num_dbs+3, mz_max+mz_tolerance)
 
     if ret != SQLITE_OK:
         strcpy(qr.err_msg, sqlite3_errmsg(db))
