@@ -1,0 +1,39 @@
+{% set data = load_setup_py_data() %}
+
+package:
+    name: libmetgem
+    version: {{ data.get('version') }}
+
+source:
+    path: ../
+
+build:
+    number: 0
+    script: python setup.py install --single-version-externally-managed --record=record.txt
+
+requirements:
+    build:
+        - python=3.7
+        - setuptools
+        - cython
+        - numpy
+    run:
+        - python=3.7
+        - numpy
+
+test:
+    imports:
+        - libmetgem
+
+about:
+    home: http://github.com/metgem/libmetgem
+    license: GPLv3
+    license_family: GPL
+    license_file: 'LICENSE'
+    summary: 'A library for molecular networking based on MS/MS spectra. '
+    description: 'A library for molecular networking based on MS/MS spectra.'
+    doc_url: ''
+    dev_url: 'http://github.com/metgem/libmetgem'
+
+extra:
+    recipe-maintainers: 'nicolas.elie@cnrs.fr'
