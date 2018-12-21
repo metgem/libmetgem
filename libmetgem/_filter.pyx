@@ -36,7 +36,7 @@ cdef vector[peak_t] filter_data_nogil(double mz_parent, const peak_t *data, int 
     peaks.assign(data, data+data_size)
     
     # Sort data array by decreasing intensities
-    sort(peaks.begin(), peaks.end(), compareByIntensity)
+    sort(peaks.begin(), peaks.end(), &compareByIntensity)
             
     # Filter out peaks with mz below 50 Da or with mz in `mz_parent` +- `parent_filter_tolerance` or with intensity < `min_intensity` % of maximum intensity
     # Maximum intensity is calculated from peaks not filtered out by mz filters

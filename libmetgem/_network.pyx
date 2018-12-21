@@ -77,10 +77,10 @@ cdef vector[interaction_t] generate_network_nogil(const float[:,:] scores_matrix
         if top_k > 0:
             length = min(row.size(), top_k)
             partial_sort(row.begin(), row.begin() + length,
-                         row.end(), compareElementsByCosine)
+                         row.end(), &compareElementsByCosine)
         else:
             length = row.size()
-            sort(row.begin(), row.end(), compareElementsByCosine)
+            sort(row.begin(), row.end(), &compareElementsByCosine)
         
         for j in range(length):
             element = row[j]
@@ -104,7 +104,7 @@ cdef vector[interaction_t] generate_network_nogil(const float[:,:] scores_matrix
                 return interactions
             callback(-size) # Negative value means new maximum
         
-    sort(interactions.begin(), interactions.end(), compareInteractionsByCosine)
+    sort(interactions.begin(), interactions.end(), &compareInteractionsByCosine)
         
     # Top K algorithm, keep only edges between two nodes if and only if each
     # of the node appeared in each other’s respective top k most similar nodes

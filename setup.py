@@ -93,6 +93,8 @@ def write_version_py(filename='libmetgem/_version.py'):
 
 if sys.platform == "win32":
     OPENMP_FLAGS = "/openmp"
+elif sys.platform == "darwin":
+    OPENMP_FLAGS = "-Xpreprocessor -fopenmp -lomp"
 else:
     OPENMP_FLAGS = "-fopenmp"
     
@@ -120,7 +122,7 @@ if HAS_CYTHON:
                 "libmetgem._cosine",
                 [os.path.join(SRC_PATH, "_cosine.pyx")],
                 extra_compile_args=[OPENMP_FLAGS],
-                extra_link_args=[OPENMP_FLAGS]
+#                extra_link_args=[OPENMP_FLAGS]
             ),
             Extension(
                 "libmetgem._filter",

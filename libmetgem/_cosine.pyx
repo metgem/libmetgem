@@ -67,7 +67,7 @@ cdef double cosine_score_nogil(double spectrum1_mz, peak_t *spectrum1_data, int 
     if scores.size() == 0:
         return 0.
     
-    sort(scores.begin(), scores.end(), compareByScore)
+    sort(scores.begin(), scores.end(), &compareByScore)
     
     peak_used1.resize(spectrum1_size)
     fill(peak_used1.begin(), peak_used1.end(), 0)
