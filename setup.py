@@ -11,8 +11,8 @@ if HAS_CYTHON:
     from Cython.Build import cythonize
 
 MAJOR = 0
-MINOR = 2
-MICRO = 1
+MINOR = 3
+MICRO = 0
 ISRELEASED = True
 VERSION = '%d.%d.%d' % (MAJOR, MINOR, MICRO)
 SRC_PATH = "libmetgem"
