@@ -133,6 +133,10 @@ if HAS_CYTHON:
                 [os.path.join(SRC_PATH, "_mgf.pyx")]
             ),
             Extension(
+                "libmetgem._msp",
+                [os.path.join(SRC_PATH, "_msp.pyx")]
+            ),
+            Extension(
                 "libmetgem._database",
                 [os.path.join(SRC_PATH, "_database.pyx"),
                  os.path.join(SRC_PATH, "sqlite", "sqlite3.c")],

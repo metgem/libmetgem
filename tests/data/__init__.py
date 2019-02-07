@@ -16,6 +16,7 @@ __all__ = ('known_filtered_spectrum', 'known_spectrum'
            'matched_peaks_window', 'min_matched_peaks_search',
            'pairs_min_cosine', 'top_k',
            'valid_mgf', 'invalid_mgf', 'empty_mgf', 'noions_mgf',
+           'valid_msp', 'invalid_msp', 'empty_msp', 'noions_msp',
            'matrix', 'random_matrix')
 
 MZ_TOLERANCES = (0.02, 0.05, 1.0)
@@ -241,9 +242,9 @@ def noions_mgf(tmpdir_factory):
     """Creates a mgf file with an entry where ions are missing"""
     
     p = tmpdir_factory.mktemp("noions").join("noions.mgf")
-    content = ["BEGIN IONS\n",
-               "PEPMASS=415.2986\n",
-               "END IONS\n"]
+    content = ["BEGIN IONS",
+               "PEPMASS=415.2986",
+               "END IONS"]
     p.write("\n".join(content))
     
     return p
@@ -276,6 +277,77 @@ def invalid_mgf(tmpdir_factory, valid_mgf, request):
             elif not line.startswith("END IONS") and not "=" in line:
                 if request.param == "comma-data":
                     line = line.replace(".", ",")
+        content.append(line)
+    p.write("\n".join(content))
+    
+    return MZS, SPECTRA_UNFILTERED, p
+    
+    
+@pytest.fixture(scope="session")
+def valid_msp(tmpdir_factory):
+    """Create a valid msp file"""
+    
+    p = tmpdir_factory.mktemp("valid").join("valid.msp")
+    content = []
+    for i in range(len(MZS)):
+        content.append("NAME: {}".format(i+1))
+        content.append("FORMULA: C11H22NO4")
+        content.append("PRECURSORMZ: {}".format(MZS[i]))
+        content.append("Num Peaks: {}".format(len(SPECTRA_UNFILTERED[i])))
+        for mz, intensity in SPECTRA_UNFILTERED[i]:
+            content.append("{} {}".format(mz, intensity))
+        content.append("")
+    p.write("\n".join(content))
+    
+    return MZS, SPECTRA_UNFILTERED, p
+    
+
+@pytest.fixture(scope="session")
+def empty_msp(tmpdir_factory):
+    """Creates an empty msp file"""
+        
+    p = tmpdir_factory.mktemp("empty").join("empty.msp")
+    p.write("")
+    return p
+    
+    
+@pytest.fixture(scope="session")
+def noions_msp(tmpdir_factory):
+    """Creates a msp file with an entry where ions are missing"""
+    
+    p = tmpdir_factory.mktemp("noions").join("noions.msp")
+    content = ["NAME: test",
+               "PRECURSORMZ: 415.2986",
+               "Num Peaks: 2"]
+    p.write("\n".join(content))
+    
+    return p
+    
+    
+@pytest.fixture()
+def invalid_msp(tmpdir_factory, valid_msp, request):
+    """Create an invalid msp file from `valid_msp`. Invalidity can
+        be parametrized using indirection."""
+        
+    _, _, mgf = valid_msp
+        
+    if not hasattr(request, 'param') or request.param is None:
+        return valid_mgf
+    
+    p = tmpdir_factory.mktemp("invalid", numbered=True).join("invalid.msp")
+    content = []
+    i = -1
+    for line in mgf.read().split("\n"):
+        if line.startswith("NAME:"):
+            i+=1
+        elif i==2:
+            if line.startswith("PRECURSORMZ:"):
+                if request.param == "semicolon":
+                    line = line.replace(":", "=")
+                elif request.param == "no-pepmass":
+                    line = ""
+            elif line.startswith("Num Peaks:") and request.param == "no-num-peaks":
+                line = ""
         content.append(line)
     p.write("\n".join(content))
     
