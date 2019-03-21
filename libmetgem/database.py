@@ -113,6 +113,8 @@ def query(fname: str, indices: List[int], mzvec: List[float],
                     score = cosine_score(pepmass, filtered, mzvec[i], datavec[i],
                                          mz_tolerance, min_matched_peaks)
                     if score > min_cosine:
+                        name = row[2]
+                        name = name if name is not None else 'Unknown'
                         r = {'score': score, 'id': row[0], 'bank_id': row[4], 'name': row[2]}
                         try:
                             qr[indices[i]].append(r)

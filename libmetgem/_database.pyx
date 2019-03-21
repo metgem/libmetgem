@@ -50,6 +50,7 @@ cdef extern from 'sqlite3.h' nogil:
                            sqlite3_stmt ** ppStmt,
                            char ** pzTail)
     int sqlite3_step(sqlite3_stmt *)
+    int sqlite3_column_type(sqlite3_stmt*, int iCol)
     const unsigned char *sqlite3_column_text(sqlite3_stmt*, int iCol)
     double sqlite3_column_double(sqlite3_stmt * , int iCol)
     sqlite3_int64 sqlite3_column_int(sqlite3_stmt*, int iCol)
@@ -305,7 +306,10 @@ cdef query_result_t query_nogil(char *fname, vector[int] indices,
                             r.score = score
                             r.id = sqlite3_column_int(stmt, 0)
                             r.bank_id = sqlite3_column_int(stmt, 4)
-                            strcpy(r.name, <char *>sqlite3_column_text(stmt, 2))
+                            if sqlite3_column_type(stmt, 2) == SQLITE_TEXT:
+                                strcpy(r.name, <char *>sqlite3_column_text(stmt, 2))
+                            else:
+                                strcpy(r.name, "Unknown")
                             qr.results[indices[i]].push_back(r)
                             
             rows += 1
