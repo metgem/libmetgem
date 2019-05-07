@@ -12,6 +12,12 @@ import os
 
 __all__ = ('read')
 
+def to_float(string: str) -> float:
+    try:
+        return float(string.strip())
+    except ValueError:
+        return 0.
+
 def read_data(line: str, f: io.IOBase, num_peaks: int) -> Generator[Tuple[float], None, None]:
     mz = intensity = ''
     icol = False  # whether we are in intensity column or not
@@ -113,9 +119,9 @@ def read(filename: str, ignore_unknown: bool=False) -> Tuple[dict, np.ndarray]:
                     elif line[:8] == 'SYNONYM:':
                         params['synonyms'].append(line[8:].strip())
                     elif line[:12] == 'PRECURSORMZ:':
-                        params['precursormz'] = float(line[12:].strip())
+                        params['precursormz'] = to_float(line[12:])
                     elif line[:14] == 'RETENTIONTIME:':
-                        params['retentiontime'] = float(line[14:].strip())
+                        params['retentiontime'] = to_float(line[14:])
                     elif not ignore_unknown:
                         pos = line.find(':')
                         if pos > 0:
