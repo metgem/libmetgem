@@ -114,13 +114,15 @@ def read(filename: str, ignore_unknown: bool=False) -> Tuple[dict, np.ndarray]:
                     if line[:10].upper() == 'NUM PEAKS:':
                         num_peaks = int(line[10:].strip())
                         in_data = True
-                    elif line[:3] == 'MW:':
+                    elif line[:3].upper() == 'MW:':
                         params['mw'] = int(line[3:].strip())
-                    elif line[:8] == 'SYNONYM:':
+                    elif line[:8].upper() == 'SYNONYM:':
                         params['synonyms'].append(line[8:].strip())
-                    elif line[:12] == 'PRECURSORMZ:':
+                    elif line[:12].upper() == 'PRECURSORMZ:':
                         params['precursormz'] = to_float(line[12:])
-                    elif line[:14] == 'RETENTIONTIME:':
+                    elif line[:10].upper() == 'EXACTMASS:':
+                        params['exactmass'] = to_float(line[10:])
+                    elif line[:14].upper() == 'RETENTIONTIME:':
                         params['retentiontime'] = to_float(line[14:])
                     elif not ignore_unknown:
                         pos = line.find(':')

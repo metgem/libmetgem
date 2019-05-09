@@ -171,6 +171,8 @@ cdef tuple read_entry(char name[MAX_NAME_SIZE], FILE * fp, bint ignore_unknown=F
                     params['mw'] = strtod(line+3, NULL)
                 elif strncasecmp(line, 'PRECURSORMZ:', 12) == 0:
                     params['precursormz'] = strtod(line+13, NULL)
+                elif strncasecmp(line, 'EXACTMASS:', 10) == 0:
+                    params['exactmass'] = strtod(line+11, NULL)
                 elif strncasecmp(line, 'RETENTIONTIME:', 14) == 0:
                     params['retentiontime'] = strtod(line+14, NULL)
                 elif strncasecmp(line, 'SYNONYM:', 8) == 0:
