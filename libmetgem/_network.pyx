@@ -67,7 +67,7 @@ cdef vector[interaction_t] generate_network_nogil(const float[:,:] scores_matrix
     for i in range(size):
         row.clear()
         row.reserve(size-i+1)
-        for j in range(i, size):
+        for j in range(i+1, size):
             cosine = scores_matrix[i, j]
             if cosine > pairs_min_cosine >= 0:
                 element.index = j

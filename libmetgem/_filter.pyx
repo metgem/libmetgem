@@ -11,10 +11,7 @@ from libcpp cimport bool
 from libcpp.vector cimport vector
 from libcpp.algorithm cimport sort
 
-from ._common cimport peak_t, arr_from_vector, np_arr_pointer
-
-DEF MZ = 0
-DEF INTENSITY = 1
+from ._common cimport peak_t, arr_from_peaks_vector, np_arr_pointer
 
 cdef bool compareByIntensity(const peak_t &a, const peak_t &b) nogil:
     return a.intensity > b.intensity
@@ -22,15 +19,19 @@ cdef bool compareByIntensity(const peak_t &a, const peak_t &b) nogil:
 @cython.boundscheck(False)
 @cython.wraparound(False)
 @cython.cdivision(True)
-cdef vector[peak_t] filter_data_nogil(double mz_parent, const peak_t *data, int data_size, int min_intensity, int parent_filter_tolerance, int matched_peaks_window, int min_matched_peaks_search) nogil:
+cdef vector[peak_t] filter_data_nogil(double mz_parent, const peak_t *data,
+                                      np.npy_intp data_size, int min_intensity,
+                                      int parent_filter_tolerance,
+                                      int matched_peaks_window,
+                                      int min_matched_peaks_search) nogil:
     cdef int i, j, count=0
-    cdef double mz, intensity
+    cdef float mz, intensity
     cdef double abs_min_intensity = -1.
     cdef vector[peak_t] peaks
     cdef vector[peak_t] peaks2
     cdef vector[peak_t] peaks3
     cdef peak_t peak
-    cdef int size
+    cdef size_t size
     cdef double dot_product
 
     peaks.assign(data, data+data_size)
@@ -68,7 +69,7 @@ cdef vector[peak_t] filter_data_nogil(double mz_parent, const peak_t *data, int 
         for j in range(size):
             if matched_peaks_window==0 or mz - matched_peaks_window <= peaks2[j].mz <= mz + matched_peaks_window:
                 if j == i:
-                    peak.intensity = sqrt(peak.intensity) * 10  # Use square root of intensities to minimize/maximize effects of high/low intensity peaks
+                    peak.intensity = <float> (sqrt(peak.intensity) * 10)  # Use square root of intensities to minimize/maximize effects of high/low intensity peaks
                     peaks3.push_back(peak)
                     dot_product += peak.intensity * peak.intensity # Calculate dot product for later normalization
                     break
@@ -79,24 +80,30 @@ cdef vector[peak_t] filter_data_nogil(double mz_parent, const peak_t *data, int 
     # Normalize data to norm 1
     dot_product = sqrt(dot_product)
     for i in range(peaks3.size()):
-        peaks3[i].intensity = peaks3[i].intensity / dot_product
+        peaks3[i].intensity = <float>(peaks3[i].intensity / dot_product)
         
     return peaks3
     
 @cython.boundscheck(False)
 @cython.wraparound(False)
 @cython.cdivision(True)    
-cdef vector[vector[peak_t]] filter_data_multi_nogil(vector[double] mzvec, vector[peak_t *] datavec, vector[int] data_sizes, int min_intensity,
-                                                    int parent_filter_tolerance, int matched_peaks_window, int min_matched_peaks_search, object callback=None) nogil:
+cdef vector[vector[peak_t]] filter_data_multi_nogil(vector[double] mzvec,
+                                                    vector[peak_t *] datavec,
+                                                    vector[np.npy_intp] data_sizes,
+                                                    int min_intensity,
+                                                    int parent_filter_tolerance,
+                                                    int matched_peaks_window,
+                                                    int min_matched_peaks_search,
+                                                    object callback=None) nogil:
     cdef vector[vector[peak_t]] spectra
     cdef int i
-    cdef int size = mzvec.size()
-    cdef int data_size
+    cdef size_t size = mzvec.size()
+    cdef np.npy_intp data_size
     cdef peak_t* data_p = NULL
     cdef bool has_callback = callback is not None
     
     spectra.resize(size)
-    for i in prange(size, schedule='guided'):
+    for i in prange(<int>size, schedule='guided'):
         data_size = data_sizes[i]
         data_p = datavec[i]
         spectra[i] = filter_data_nogil(mzvec[i], data_p, data_size, min_intensity, parent_filter_tolerance, matched_peaks_window, min_matched_peaks_search)
@@ -110,33 +117,36 @@ cdef vector[vector[peak_t]] filter_data_multi_nogil(vector[double] mzvec, vector
         
     return spectra
       
-def filter_data(double mz_parent, np.ndarray[np.float32_t, ndim=2] data, int min_intensity, int parent_filter_tolerance, int matched_peaks_window, int min_matched_peaks_search):
+def filter_data(double mz_parent, np.ndarray[np.float32_t, ndim=2] data,
+                int min_intensity, int parent_filter_tolerance,
+                int matched_peaks_window, int min_matched_peaks_search):
     cdef np.ndarray[np.float32_t, ndim=2] filtered
-    cdef vector[peak_t] peaks = filter_data_nogil(mz_parent, np_arr_pointer(data), data.shape[0], min_intensity, parent_filter_tolerance, matched_peaks_window, min_matched_peaks_search)
+    cdef vector[peak_t] peaks = filter_data_nogil(mz_parent, <peak_t*>np_arr_pointer(data), data.shape[0], min_intensity, parent_filter_tolerance, matched_peaks_window, min_matched_peaks_search)
     
     if peaks.size() == 0:
         return np.empty((0,2), dtype=np.float32)
         
-    filtered = np.asarray(arr_from_vector(peaks))
+    filtered = arr_from_peaks_vector(peaks)
     
     return filtered
     
-def filter_data_multi(vector[double] mzvec, list datavec, int min_intensity, int parent_filter_tolerance,
-                      int matched_peaks_window, int min_matched_peaks_search, object callback=None):
+def filter_data_multi(vector[double] mzvec, list datavec, int min_intensity,
+                      int parent_filter_tolerance, int matched_peaks_window,
+                      int min_matched_peaks_search, object callback=None):
     cdef:
         list filtered = []
         np.ndarray[np.float32_t, ndim=2] tmp_array
         vector[vector[peak_t]] spectra
         vector[peak_t] peaks
-        int size = mzvec.size()
+        size_t size = mzvec.size()
         int i
         vector[peak_t *] data_p
-        vector[int] data_sizes
+        vector[np.npy_intp] data_sizes
         
     data_p.resize(size)
     data_sizes.resize(size)
     for i, tmp_array in enumerate(datavec):
-        data_p[i] = np_arr_pointer(tmp_array)
+        data_p[i] = <peak_t*>np_arr_pointer(tmp_array)
         data_sizes[i] = tmp_array.shape[0]
     
     spectra = filter_data_multi_nogil(mzvec, data_p, data_sizes, min_intensity, parent_filter_tolerance, matched_peaks_window, min_matched_peaks_search, callback)
@@ -146,7 +156,7 @@ def filter_data_multi(vector[double] mzvec, list datavec, int min_intensity, int
         if peaks.size() == 0:
             tmp_array = np.empty((0,2), dtype=np.float32)
         else:
-            tmp_array = np.asarray(arr_from_vector(peaks))
+            tmp_array = arr_from_peaks_vector(peaks)
             
         filtered.append(tmp_array)
     

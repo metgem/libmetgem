@@ -8,14 +8,12 @@ cimport cython
 import numpy as np
 cimport numpy as np
 from libcpp.vector cimport vector
-from libc.stdlib cimport strtod as std_strtod, strtol
+from libc.stdlib cimport strtof as std_strtof, strtol
 from libc.string cimport strncmp, strncpy, strcpy, strcspn, strlen
 from libc.stdio cimport fopen, fclose, fgets, FILE
 
-from ._common cimport peak_t, arr_from_vector
+from ._common cimport peak_t, arr_from_peaks_vector
 
-DEF MZ = 0
-DEF INTENSITY = 1
 DEF MAX_KEY_SIZE = 64
 DEF MAX_VALUE_SIZE = 2048
 DEF MAX_LINE_SIZE = 2051 # 2048 characters + '\r\n' + '\0'
@@ -44,14 +42,14 @@ ELSE:
         return string
     
     
-cdef inline double strtod(char* string, char **endptr) nogil:
+cdef inline double strtof(char* string, char **endptr) nogil:
     cdef char *ptr = NULL
     
     # Allow comma as decimal separator
     ptr = strchr(string, b',')
     if ptr > string:
         string[ptr-string] = b'.'
-    return std_strtod(string, endptr)
+    return std_strtof(string, endptr)
     
     
 cdef void read_data(char line[MAX_LINE_SIZE], vector[peak_t] *peaklist, FILE *fp) nogil:
@@ -61,7 +59,7 @@ cdef void read_data(char line[MAX_LINE_SIZE], vector[peak_t] *peaklist, FILE *fp
        
     cdef:
         peak_t peak
-        double value
+        float value
         char *ptr = NULL
         
     peaklist.clear()
@@ -69,10 +67,10 @@ cdef void read_data(char line[MAX_LINE_SIZE], vector[peak_t] *peaklist, FILE *fp
         if strncmp(line, 'END IONS', 8) == 0:
             return
         else:
-            value = std_strtod(line, &ptr)
+            value = std_strtof(line, &ptr)
             if value > 0:
                 peak.mz = value
-                peak.intensity = std_strtod(ptr, NULL)
+                peak.intensity = std_strtof(ptr, NULL)
                 peaklist.push_back(peak)
                 
         if fgets(line, MAX_LINE_SIZE, fp) == NULL:
@@ -102,14 +100,16 @@ cdef tuple read_entry(FILE * fp, bint ignore_unknown=False):
         ptr = strchr(line, b'=')
         if ptr > line:
             if strncmp(line, 'PEPMASS', 7) == 0:
-                params['pepmass'] = strtod(line+8, NULL)
+                params['pepmass'] = strtof(line+8, NULL)
+            elif strncmp(line, 'FEATURE_ID', 10) == 0:
+                params['feature_id'] = strtol(line+11, &ptr, 10)
             elif strncmp(line, 'CHARGE', 6) == 0:
                 charge = strtol(line+7, &ptr, 10)
                 if strncmp(ptr, '-', 1) == 0:
                     charge *= -1
                 params['charge'] = charge
             elif strncmp(line, 'RTINSECONDS', 11) == 0:
-                params['rtinsecond'] = strtod(line+12, NULL)
+                params['rtinsecond'] = strtof(line+12, NULL)
             elif strncmp(line, 'MSLEVEL', 7) == 0:
                 params['mslevel'] = strtol(line+8, &ptr, 10)
             elif not ignore_unknown:
@@ -134,7 +134,7 @@ cdef tuple read_entry(FILE * fp, bint ignore_unknown=False):
             else:
                 read_data(line, &peaklist, fp)
                 if peaklist.size() > 0:
-                    return params, np.asarray(arr_from_vector(peaklist))
+                    return params, arr_from_peaks_vector(peaklist)
                 else:
                     return params, np.empty((0, 2), dtype=np.float32)
                 

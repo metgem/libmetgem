@@ -9,14 +9,12 @@ import numpy as np
 cimport numpy as np
 from libcpp.vector cimport vector
 from libcpp cimport bool
-from libc.stdlib cimport strtod, strtol
+from libc.stdlib cimport strtof, strtol
 from libc.string cimport strncpy, strcpy, strcspn, strlen
 from libc.stdio cimport fopen, fclose, fgets, fseek, ftell, SEEK_CUR, FILE
 
-from ._common cimport peak_t, arr_from_vector
+from ._common cimport peak_t, arr_from_peaks_vector
 
-DEF MZ = 0
-DEF INTENSITY = 1
 DEF MAX_NAME_SIZE = 514
 DEF MAX_KEY_SIZE = 64
 DEF MAX_VALUE_SIZE = 2048
@@ -94,7 +92,7 @@ cdef void read_data(char line[MAX_LINE_SIZE], vector[peak_t] *peaklist,
        
     cdef:
         peak_t peak
-        double value
+        float value
         char *ptr = NULL
         char *ptr2 = NULL
         int peaks_read = 0
@@ -107,7 +105,7 @@ cdef void read_data(char line[MAX_LINE_SIZE], vector[peak_t] *peaklist,
             
         if strncasecmp(line, 'NAME:', 5) == 0:
             if ftell(fp) > 0:
-                fseek(fp, -strlen(line)-1, SEEK_CUR)
+                fseek(fp, -<long>strlen(line)-1, SEEK_CUR)
             return
             
         while line[i] != b'\0':
@@ -115,17 +113,17 @@ cdef void read_data(char line[MAX_LINE_SIZE], vector[peak_t] *peaklist,
                 line[i] = b' '
             i += 1
         
-        value = strtod(line, &ptr)
+        value = strtof(line, &ptr)
         while True:
             if value > 0:
                 peak.mz = value
-                peak.intensity = strtod(ptr, &ptr2)
+                peak.intensity = strtof(ptr, &ptr2)
                 peaklist.push_back(peak)
                 peaks_read += 1
                 if peaks_read >= num_peaks:
                     return
                     
-            value = strtod(ptr2, &ptr)
+            value = strtof(ptr2, &ptr)
             if ptr == ptr2:
                 break
                 
@@ -158,7 +156,7 @@ cdef tuple read_entry(char name[MAX_NAME_SIZE], FILE * fp, bint ignore_unknown=F
                 read_data(line, &peaklist, fp, num_peaks)
 
             if peaklist.size() > 0:
-                return params, np.asarray(arr_from_vector(peaklist))
+                return params, arr_from_peaks_vector(peaklist)
             else:
                 return params, np.empty((0, 2), dtype=np.float32)
         else:
@@ -168,13 +166,13 @@ cdef tuple read_entry(char name[MAX_NAME_SIZE], FILE * fp, bint ignore_unknown=F
                     num_peaks = strtol(line+10, &ptr, 10)
                     in_data = True
                 elif strncasecmp(line, 'MW:', 3) == 0:
-                    params['mw'] = strtod(line+3, NULL)
+                    params['mw'] = strtof(line+3, NULL)
                 elif strncasecmp(line, 'PRECURSORMZ:', 12) == 0:
-                    params['precursormz'] = strtod(line+13, NULL)
+                    params['precursormz'] = strtof(line+13, NULL)
                 elif strncasecmp(line, 'EXACTMASS:', 10) == 0:
-                    params['exactmass'] = strtod(line+11, NULL)
+                    params['exactmass'] = strtof(line+11, NULL)
                 elif strncasecmp(line, 'RETENTIONTIME:', 14) == 0:
-                    params['retentiontime'] = strtod(line+14, NULL)
+                    params['retentiontime'] = strtof(line+14, NULL)
                 elif strncasecmp(line, 'SYNONYM:', 8) == 0:
                     strcpy(value, line+8)
                     pos = strcspn(value, '\r\n')

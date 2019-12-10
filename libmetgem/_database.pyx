@@ -158,7 +158,7 @@ cdef extern from 'sqlite3.h' nogil:
 @cython.cdivision(True)
 cdef query_result_t query_nogil(char *fname, vector[int] indices,
                                 vector[double] mzvec, vector[peak_t *] datavec,
-                                vector[int] data_sizes, vector[int] databases,
+                                vector[np.npy_intp] data_sizes, vector[int] databases,
                                 double mz_tolerance, int min_matched_peaks,
                                 int min_intensity, int parent_filter_tolerance,
                                 int matched_peaks_window,
@@ -173,10 +173,11 @@ cdef query_result_t query_nogil(char *fname, vector[int] indices,
         double pepmass
         const peak_t *blob
         int blob_size
-        int size = mzvec.size()
+        size_t size = mzvec.size()
         char query[4096]
         double cosine_mz_tolerance, score
         int i
+        unsigned int j
         int ret
         double mz_min = mzvec[0], mz_max = mzvec[0]
         bool has_callback = callback is not None
@@ -212,7 +213,7 @@ cdef query_result_t query_nogil(char *fname, vector[int] indices,
             mz_max = mzvec[i]
                
     # Prepare SQL query
-    num_dbs = databases.size()
+    num_dbs = <int> databases.size()
     if num_dbs > 0:
         # Filter databases
         ret = 0
@@ -338,16 +339,21 @@ cdef query_result_t query_nogil(char *fname, vector[int] indices,
 @cython.boundscheck(False)
 @cython.wraparound(False)
 @cython.cdivision(True)
-def query(str filename, vector[int] indices, vector[double] mzvec, list datavec, vector[int] databases, double mz_tolerance, int min_matched_peaks, int min_intensity, int parent_filter_tolerance, int matched_peaks_window, int min_matched_peaks_search, double min_cosine, double analog_mz_tolerance=0., bool positive_polarity=True, object callback=None):
+def query(str filename, vector[int] indices, vector[double] mzvec, list datavec,
+          vector[int] databases, double mz_tolerance, int min_matched_peaks,
+          int min_intensity, int parent_filter_tolerance,
+          int matched_peaks_window, int min_matched_peaks_search,
+          double min_cosine, double analog_mz_tolerance=0.,
+          bool positive_polarity=True, object callback=None):
     cdef:
         bytes fname_bytes
         char *fname
         int res_code
         np.ndarray[np.float32_t, ndim=2] tmp_array
-        int size = mzvec.size()
+        size_t size = mzvec.size()
         int i
         vector[peak_t *] data_p
-        vector[int] data_sizes
+        vector[np.npy_intp] data_sizes
         query_result_t qr
         vector[db_result_t] results
         db_result_t r
@@ -355,7 +361,7 @@ def query(str filename, vector[int] indices, vector[double] mzvec, list datavec,
     data_p.resize(size)
     data_sizes.resize(size)
     for i, tmp_array in enumerate(datavec):
-        data_p[i] = np_arr_pointer(tmp_array)
+        data_p[i] = <peak_t*>np_arr_pointer(tmp_array)
         data_sizes[i] = tmp_array.shape[0]
         
     fname_bytes = filename.encode(CHARSET)
