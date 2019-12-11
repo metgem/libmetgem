@@ -48,17 +48,17 @@ cdef bool compareInteractionsByCosine(const interaction_t &a, const interaction_
 cdef vector[interaction_t] generate_network_nogil(const float[:,:] scores_matrix,
                                                   vector[double] mzvec,
                                                   double pairs_min_cosine,
-                                                  int top_k,
+                                                  size_t top_k,
                                                   object callback=None) nogil:
     cdef:
         vector[interaction_t] interactions, interactions2
         interaction_t inter
-        int size = min(scores_matrix.shape[0], mzvec.size())
+        size_t size = min(<size_t>scores_matrix.shape[0], mzvec.size())
         int i, j
         vector[element_t] row
         element_t element
         double cosine
-        int length
+        size_t length
         int x, y
         vector[int] x_ind, y_ind
         bool flag
@@ -149,7 +149,7 @@ cdef vector[interaction_t] generate_network_nogil(const float[:,:] scores_matrix
     
     
 def generate_network(const float[:,:] scores_matrix, vector[double] mzvec,
-                     double pairs_min_cosine, int top_k, object callback=None):
+                     double pairs_min_cosine, size_t top_k, object callback=None):
     cdef:
         vector[interaction_t] interactions
         interaction_t inter
