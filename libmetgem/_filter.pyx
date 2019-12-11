@@ -19,34 +19,25 @@ cdef bool compareByIntensity(const peak_t &a, const peak_t &b) nogil:
 @cython.boundscheck(False)
 @cython.wraparound(False)
 @cython.cdivision(True)
-cdef vector[peak_t] filter_data_nogil(double mz_parent, const peak_t *data,
-                                      np.npy_intp data_size, int min_intensity,
-                                      int parent_filter_tolerance,
-                                      int matched_peaks_window,
-                                      int min_matched_peaks_search) nogil:
-    cdef int i, j, count=0
-    cdef float mz, intensity
-    cdef double abs_min_intensity = -1.
-    cdef vector[peak_t] peaks
-    cdef vector[peak_t] peaks2
-    cdef vector[peak_t] peaks3
-    cdef peak_t peak
-    cdef size_t size
-    cdef double dot_product
-
-    peaks.assign(data, data+data_size)
-    
-    # Sort data array by decreasing intensities
-    sort(peaks.begin(), peaks.end(), &compareByIntensity)
+cdef vector[peak_t] parent_filter_nogil(double mz_parent, vector[peak_t] data,
+                                        int min_intensity,
+                                        int parent_filter_tolerance) nogil:
+    cdef:
+        int i
+        float mz, intensity
+        double abs_min_intensity = -1.
+        vector[peak_t] result
+        peak_t peak
+        size_t size
             
     # Filter out peaks with mz below 50 Da or with mz in `mz_parent` +- `parent_filter_tolerance` or with intensity < `min_intensity` % of maximum intensity
     # Maximum intensity is calculated from peaks not filtered out by mz filters
-    size = peaks.size()
-    peaks2.reserve(size)
+    size = data.size()
+    result.reserve(size)
     for i in range(size):
-        mz = peaks[i].mz
+        mz = data[i].mz
         if 50 <= mz <= mz_parent - parent_filter_tolerance or mz >= mz_parent + parent_filter_tolerance:  # mz filter
-            intensity = peaks[i].intensity
+            intensity = data[i].intensity
             
             if abs_min_intensity < 0:
                 abs_min_intensity = min_intensity / 100. * intensity
@@ -56,33 +47,92 @@ cdef vector[peak_t] filter_data_nogil(double mz_parent, const peak_t *data,
             
             peak.mz = mz
             peak.intensity = intensity
-            peaks2.push_back(peak)
+            result.push_back(peak)
+    
+    return result
+   
+
+@cython.boundscheck(False)
+@cython.wraparound(False)
+@cython.cdivision(True)    
+cdef vector[peak_t] window_rank_filter_nogil(vector[peak_t] data,
+                                             int matched_peaks_window,
+                                             int min_matched_peaks_search) nogil:
+    cdef:
+        int i, j, count=0
+        float mz
+        vector[peak_t] result
+        peak_t peak
+        size_t size
     
     # Window rank filter: For each peak, keep it only if it is in the top `min_matched_peaks_search` peaks in the +/- `matched_peaks_window` range
-    dot_product = 0.
-    size = peaks2.size()
-    peaks3.reserve(size)
+    size = data.size()
+    result.reserve(size)
     for i in range(size):
-        peak = peaks2[i]
+        peak = data[i]
         mz = peak.mz
         count = 0
         for j in range(size):
-            if matched_peaks_window==0 or mz - matched_peaks_window <= peaks2[j].mz <= mz + matched_peaks_window:
+            if matched_peaks_window==0 or mz - matched_peaks_window <= data[j].mz <= mz + matched_peaks_window:
                 if j == i:
-                    peak.intensity = <float> (sqrt(peak.intensity) * 10)  # Use square root of intensities to minimize/maximize effects of high/low intensity peaks
-                    peaks3.push_back(peak)
-                    dot_product += peak.intensity * peak.intensity # Calculate dot product for later normalization
+                    result.push_back(peak)
                     break
                 count += 1
                 if count >= min_matched_peaks_search > 0:
                     break
-                    
-    # Normalize data to norm 1
-    dot_product = sqrt(dot_product)
-    for i in range(peaks3.size()):
-        peaks3[i].intensity = <float>(peaks3[i].intensity / dot_product)
         
-    return peaks3
+    return result
+    
+@cython.boundscheck(False)
+@cython.wraparound(False)
+@cython.cdivision(True)
+cdef vector[peak_t] square_root_and_normalize_data_nogil(vector[peak_t] data) nogil:
+    cdef:
+        int i
+        double dot_product = 0.
+        peak_t peak
+        size_t size
+        float intensity
+    
+    size = data.size()
+    for i in range(size):
+        peak = data[i]
+        peak.intensity = <float> (sqrt(peak.intensity) * 10)  # Use square root of intensities to minimize/maximize effects of high/low intensity peaks
+        dot_product += peak.intensity * peak.intensity  # Calculate dot product for later normalization
+        
+    # Normalize data to norm 1       
+    dot_product = sqrt(dot_product)
+    for i in range(size):
+        data[i].intensity = <float> (sqrt(data[i].intensity) * 10 / dot_product)  # Use square root of intensities to minimize/maximize effects of high/low intensity peaks
+        
+    return data
+    
+    
+@cython.boundscheck(False)
+@cython.wraparound(False)
+@cython.cdivision(True)
+cdef vector[peak_t] filter_data_nogil(double mz_parent, const peak_t *data,
+                                      np.npy_intp data_size, int min_intensity,
+                                      int parent_filter_tolerance,
+                                      int matched_peaks_window,
+                                      int min_matched_peaks_search) nogil:
+    cdef vector[peak_t] peaks
+
+    peaks.assign(data, data+data_size)
+        
+    # Sort data array by decreasing intensities
+    sort(peaks.begin(), peaks.end(), &compareByIntensity)
+    
+    if min_intensity > 0 or parent_filter_tolerance > 0:
+        peaks = parent_filter_nogil(mz_parent, peaks, min_intensity, parent_filter_tolerance)
+        
+    if matched_peaks_window > 0 and min_matched_peaks_search > 0:
+        peaks = window_rank_filter_nogil(peaks, matched_peaks_window, min_matched_peaks_search)
+        
+    peaks = square_root_and_normalize_data_nogil(peaks)
+    
+    return peaks
+    
     
 @cython.boundscheck(False)
 @cython.wraparound(False)
@@ -95,12 +145,13 @@ cdef vector[vector[peak_t]] filter_data_multi_nogil(vector[double] mzvec,
                                                     int matched_peaks_window,
                                                     int min_matched_peaks_search,
                                                     object callback=None) nogil:
-    cdef vector[vector[peak_t]] spectra
-    cdef int i
-    cdef size_t size = mzvec.size()
-    cdef np.npy_intp data_size
-    cdef peak_t* data_p = NULL
-    cdef bool has_callback = callback is not None
+    cdef:
+        vector[vector[peak_t]] spectra
+        int i
+        size_t size = mzvec.size()
+        np.npy_intp data_size
+        peak_t* data_p = NULL
+        bool has_callback = callback is not None
     
     spectra.resize(size)
     for i in prange(<int>size, schedule='guided'):
