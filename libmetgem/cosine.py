@@ -6,14 +6,14 @@ from .common import MZ, INTENSITY
 from ._loader import load_cython
 
 from typing import List, Callable, Tuple
-from enum import Enum
+from enum import IntEnum
 import numpy as np
 import operator
 
 __all__ = ('cosine_score', 'compare_spectra', 'compute_distance_matrix', 'SpectraMatchState')
 
 @load_cython
-class SpectraMatchState(Enum):
+class SpectraMatchState(IntEnum):
     fragment = 0
     neutral_loss = 1
     
@@ -59,7 +59,7 @@ def _compare_spectra(spectrum1_mz: float, spectrum1_data: np.ndarray,
             peak_used1[ix1] = peak_used2[ix2] = 1
             num_matched_peaks += 1
             if return_matches:
-                matches.append((ix1, ix2, t))
+                matches.append((ix1, ix2, score, t))
 
     return total, num_matched_peaks, matches
 
@@ -112,15 +112,16 @@ def compare_spectra(spectrum1_mz: float, spectrum1_data: np.ndarray,
             them as identical.
     
     Returns:
-        Array with three columns:
-            1. indexes of peaks from first spectrum,
-            2. indexes of peaks from second spectrum,
-            3. type of match (fragment or neutral loss)
+        Record array with four columns:
+            ix1 -> indexes of peaks from first spectrum,
+            ix2 -> indexes of peaks from second spectrum,
+            score -> partial score,
+            type -> type of match (fragment or neutral loss)
     """
     _, _, matches = _compare_spectra(spectrum1_mz, spectrum1_data,
                                      spectrum2_mz, spectrum2_data,
                                      mz_tolerance, return_matches=True)
-    return np.asarray(matches, dtype=np.uint16)
+    return np.asarray(matches, dtype=np.dtype([('ix1', '<u2'), ('ix2', '<u2'), ('score', '<f8'), ('type', '<u1')]))
     
 @load_cython
 def compute_distance_matrix(mzs: List[float], spectra: List[np.ndarray],
