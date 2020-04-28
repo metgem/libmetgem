@@ -122,7 +122,7 @@ if HAS_CYTHON:
                 "libmetgem._cosine",
                 [os.path.join(SRC_PATH, "_cosine.pyx")],
                 extra_compile_args=[OPENMP_FLAGS],
-#                extra_link_args=[OPENMP_FLAGS]
+                extra_link_args=[OPENMP_FLAGS]
             ),
             Extension(
                 "libmetgem._filter",
