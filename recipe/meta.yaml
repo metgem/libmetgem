@@ -13,13 +13,15 @@ build:
 
 requirements:
     build:
+        - {{ compiler('c') }}
+        - {{ compiler('cxx') }}
+    host:
         - python
-        - setuptools
         - cython
         - numpy
     run:
         - python
-        - numpy
+        - {{ pin_compatible('numpy') }}
 
 test:
     imports:
