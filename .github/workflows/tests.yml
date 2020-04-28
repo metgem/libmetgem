@@ -41,7 +41,7 @@ jobs:
     - name: Install test dependencies
       shell: bash -l {0}
       run: |
-        conda install -q pytest pylint pytest-pylint toml pytest-qt pytest-cov codecov cython
+        conda install -q pytest pylint pytest-pylint toml pytest-cov codecov cython
         conda install pyteomics -c bioconda
     - name: Install xvfb
       shell: bash -l {0}
