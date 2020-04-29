@@ -15,7 +15,7 @@ jobs:
       matrix:
         python-version: [3.7] #[3.5, 3.6, 3.7, 3.8]
         os: [ubuntu-latest, windows-latest, macos-latest]
-      fail-fast: false
+      #fail-fast: false
 
     steps:
     - uses: actions/checkout@v2
@@ -52,4 +52,10 @@ jobs:
       run: conda install --use-local libmetgem
     - name: Test with pytest
       shell: bash -l {0}
-      run: pytest --cov=libmetgem
+      run: cd tests && pytest --cov=libmetgem
+    - name: Upload coverage
+      if: success()
+      uses: codecov/codecov-action@v1
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+        name: ${{ runner.os }} Python ${{ matrix.python-version }}
