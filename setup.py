@@ -138,7 +138,9 @@ if HAS_CYTHON:
             ),
             Extension(
                 "libmetgem._database",
-                [os.path.join(SRC_PATH, "_database.pyx")]
+                [os.path.join(SRC_PATH, "_database.pyx"),
+                 os.path.join(SRC_PATH, "sqlite", "sqlite3.c")],
+                 include_dirs=[os.path.join(SRC_PATH, "sqlite")]
             ),
             Extension(
                 "libmetgem._network",

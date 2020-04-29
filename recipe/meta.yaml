@@ -18,7 +18,6 @@ requirements:
         - python
         - cython
         - numpy
-        - sqlite
     run:
         - python
         - {{ pin_compatible('numpy') }}
