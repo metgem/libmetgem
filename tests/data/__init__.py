@@ -5,7 +5,7 @@ import numpy as np
 import pytest
 
 from libmetgem.common import MZ, INTENSITY
-from libmetgem.cosine import compute_distance_matrix
+from libmetgem.cosine import compute_similarity_matrix
 
 __all__ = ('known_filtered_spectrum', 'known_spectrum'
            'known_spectrum_filter_comparison',
@@ -218,6 +218,7 @@ def valid_mgf(tmpdir_factory):
     for i in range(len(MZS)):
         content.append("BEGIN IONS")
         content.append("FEATURE_ID={}".format(i+1))
+        content.append("FORMULA=C11H22NO4")
         content.append("PEPMASS={}".format(MZS[i]))
         for mz, intensity in SPECTRA_UNFILTERED[i]:
             content.append("{} {}".format(mz, intensity))
@@ -362,7 +363,7 @@ def matrix(request, random_spectra):
     """
     
     mzs, spectra = random_spectra
-    m = compute_distance_matrix(mzs, spectra, request.param[0], request.param[1])
+    m = compute_similarity_matrix(mzs, spectra, request.param[0], request.param[1])
     m.flags.writeable = False
     
     return m

@@ -20,7 +20,7 @@ def test_mgf_pepmass(valid_mgf, ignore_unknown):
     mzs, _, p = valid_mgf
     gen = read_mgf(str(p), ignore_unknown=ignore_unknown)
     for i, (params, _) in enumerate(gen):
-        assert params['pepmass'] == mzs[i]
+        assert pytest.approx(params['pepmass']) == mzs[i]
         
         
 @pytest.mark.parametrize('ignore_unknown', [True, False])
@@ -31,7 +31,7 @@ def test_mgf_pepmass_comma(invalid_mgf, ignore_unknown):
     mzs, _, p = invalid_mgf
     gen = read_mgf(str(p), ignore_unknown=ignore_unknown)
     for i, (params, _) in enumerate(gen):
-        assert params['pepmass'] == mzs[i]
+        assert pytest.approx(params['pepmass']) == mzs[i]
 
         
 @pytest.mark.parametrize('ignore_unknown', [True, False])
@@ -72,9 +72,9 @@ def test_mgf_ignore_unknown(valid_mgf, ignore_unknown):
     for i, (params, _) in enumerate(gen):
         assert 'pepmass' in params
         if ignore_unknown:
-            assert 'feature_id' not in params
+            assert 'formula' not in params
         else:
-            assert 'feature_id' in params
+            assert 'formula' in params
         
 
 @pytest.mark.parametrize('ignore_unknown', [True, False])

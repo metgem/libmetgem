@@ -37,7 +37,7 @@ def generate_network(scores_matrix: np.ndarray, mzs: List[float],
         * Cosine (np.float32): cosine score between source and target nodes.
     
     See Also:
-        compute_distance_matrix, cosine_score
+        compute_similarity_matrix, cosine_score
         
     .. _TopK:
         https://bix-lab.ucsd.edu/display/Public/Molecular+Networking+Documentation#MolecularNetworkingDocumentation-AdvancedNetworkOptions
@@ -49,6 +49,7 @@ def generate_network(scores_matrix: np.ndarray, mzs: List[float],
 
     triu = np.triu(scores_matrix)[:size,:size]
     triu[triu <= max(0, pairs_min_cosine)] = 0
+    np.fill_diagonal(triu, 0)  # remove self loops
     for i in range(size):
         # indexes = np.argpartition(triu[i,], -top_k)[-top_k:] # Should be faster and give the same results
         indexes = np.argsort(triu[i,])

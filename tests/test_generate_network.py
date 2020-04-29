@@ -79,12 +79,12 @@ def test_generate_network_list_larger_than_matrix(random_matrix):
 def test_generate_network_all_zero(random_matrix):
     """
         If all filtering parameters are set to zero, we should get all possibles
-        interactions.
+        interactions excluding self loops.
     """
 
     mzs, matrix = random_matrix
     
-    max_size = np.count_nonzero(np.triu(matrix))
+    max_size = np.count_nonzero(np.triu(matrix)) - matrix.shape[0]
     interactions = generate_network(matrix, mzs, 0, 0)
     
     assert interactions.shape[0] == max_size
@@ -93,12 +93,12 @@ def test_generate_network_all_zero(random_matrix):
 def test_generate_network_high_top_k(random_matrix):
     """
         If top_k is high and pairs_min_cosine is zero, we should get all
-        possibles interactions.
+        possibles interactions excluding self loops.
     """
     
     mzs, matrix = random_matrix
 
-    max_size = np.count_nonzero(np.triu(matrix))
+    max_size = np.count_nonzero(np.triu(matrix)) - matrix.shape[0]
     top_k = matrix.shape[0]
     interactions = generate_network(matrix, mzs, 0, top_k)
     
@@ -120,25 +120,20 @@ def test_generate_network_high_pairs_min_cosine(random_matrix,
     assert interactions.size == 0
     
     
-@pytest.mark.parametrize("pairs_min_cosine", [0, 0.3, 0.7])
+@pytest.mark.parametrize("pairs_min_cosine", [0, 0.3, 0.7, 1])
 def test_generate_network_self_loop(random_matrix,
                                     pairs_min_cosine, top_k):
     """
-        Output array should include all self-loops if pairs_min_cosine
-        is lower than one and self-loops should have cosine equal to one.
+        Output array should not include self-loops
     """
     
     mzs, matrix = random_matrix
 
     interactions = generate_network(matrix, mzs,
                                     pairs_min_cosine, top_k)
-    count = 0
-    for source, target, delta, cosine in interactions:
-        if source == target:
-            count += 1
-            assert pytest.approx(cosine) == 1.0
+    count = len([source for source, target, _, _ in interactions if source == target])
     
-    assert count == matrix.shape[0]
+    assert count == 0
     
 
 @pytest.mark.parametrize("pairs_min_cosine", [-0.2, 0, 0.3, 0.7])    
@@ -190,6 +185,13 @@ def test_generate_network_python_cython(random_matrix,
                                     pairs_min_cosine, 0)
     interactions_c = generate_network(matrix, mzs,
                                     pairs_min_cosine, 0)
-
-    assert pytest.approx(interactions_p) == interactions_c
+    
+    assert interactions_p.shape == interactions_c.shape
+    assert interactions_p.dtype == interactions_c.dtype
+    
+    for name, (dtype, _) in interactions_c.dtype.fields.items():  
+        if np.issubdtype(dtype.type, np.floating):
+            assert pytest.approx(interactions_p[name]) == interactions_c[name]
+        else:
+            assert np.array_equal(interactions_p[name], interactions_c[name])
     

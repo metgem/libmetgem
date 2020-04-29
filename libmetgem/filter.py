@@ -110,14 +110,17 @@ def filter_data(mz_parent: float, data: np.ndarray, min_intensity: int,
         A filtered array.
 
     """
+    
+    if data.size == 0:
+        return data
 
-    if min_intensity > 0 or parent_filter_tolerance > 0:
+    if min_intensity > 0 or parent_filter_tolerance > 0 or min(data[:,MZ]) < 50:
         data = parent_filter(mz_parent, data, min_intensity, parent_filter_tolerance)
         
     if matched_peaks_window > 0 and min_matched_peaks_search > 0:
         data = window_rank_filter(data, matched_peaks_window, min_matched_peaks_search)
         
-    data = square_root_and_normalize_data(data, copy = False)
+    data = square_root_and_normalize_data(data, copy = True)
     
     return data
 

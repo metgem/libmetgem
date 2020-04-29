@@ -11,10 +11,16 @@ from libcpp cimport bool
 from libcpp.vector cimport vector
 from libcpp.algorithm cimport sort
 
+cdef extern from "<algorithm>" namespace "std" nogil:
+    Iter min_element[Iter, Compare](Iter first, Iter last, Compare comp) except +
+
 from ._common cimport peak_t, arr_from_peaks_vector, np_arr_pointer
 
 cdef bool compareByIntensity(const peak_t &a, const peak_t &b) nogil:
     return a.intensity > b.intensity
+
+cdef bool compareByMz(const peak_t &a, const peak_t &b) nogil:
+    return a.mz < b.mz
     
 @cython.boundscheck(False)
 @cython.wraparound(False)
@@ -118,12 +124,15 @@ cdef vector[peak_t] filter_data_nogil(double mz_parent, const peak_t *data,
                                       int min_matched_peaks_search) nogil:
     cdef vector[peak_t] peaks
 
+    if data_size == 0:
+        return peaks
+
     peaks.assign(data, data+data_size)
         
     # Sort data array by decreasing intensities
     sort(peaks.begin(), peaks.end(), &compareByIntensity)
     
-    if min_intensity > 0 or parent_filter_tolerance > 0:
+    if min_intensity > 0 or parent_filter_tolerance > 0 or (<peak_t> (min_element(peaks.begin(), peaks.end(), &compareByMz)[0])).mz < 50:
         peaks = parent_filter_nogil(mz_parent, peaks, min_intensity, parent_filter_tolerance)
         
     if matched_peaks_window > 0 and min_matched_peaks_search > 0:

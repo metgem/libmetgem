@@ -1,32 +1,32 @@
 """
-Test `libmetgem.cosine.compute_distance_matrix`.
+Test `libmetgem.cosine.compute_similarity_matrix`.
 """
 
 import pytest
 import numpy as np
 
 from libmetgem import IS_CYTHONIZED
-from libmetgem.cosine import compute_distance_matrix
+from libmetgem.cosine import compute_similarity_matrix
 
 from data import matrix, random_spectra, mz_tolerance, min_matched_peaks
 
 
 def test_matrix_shape(matrix):
-    """`compute_distance_matrix` should always return 2D matrices.
+    """`compute_similarity_matrix` should always return 2D matrices.
     """
     
     assert len(matrix.shape) == 2
 
 
 def test_matrix_square(matrix):
-    """`compute_distance_matrix` should always return square matrices.
+    """`compute_similarity_matrix` should always return square matrices.
     """
     
     assert matrix.shape[0] == matrix.shape[1]
 
 
 def test_matrix_diag(matrix):
-    """`compute_distance_matrix` should always return matrices with diagonal
+    """`compute_similarity_matrix` should always return matrices with diagonal
         full of 1.
     """
         
@@ -35,14 +35,14 @@ def test_matrix_diag(matrix):
 
 
 def test_matrix_symmetric(matrix):
-    """`compute_distance_matrix` should always return symmetric matrices.
+    """`compute_similarity_matrix` should always return symmetric matrices.
     """
     
     assert matrix == pytest.approx(matrix.T)
     
 
 def test_matrix_max(matrix):
-    """`compute_distance_matrix` returned matrices should not have values
+    """`compute_similarity_matrix` returned matrices should not have values
         upper than 1.
     """
         
@@ -50,7 +50,7 @@ def test_matrix_max(matrix):
 
 
 def test_matrix_min(matrix):
-    """`compute_distance_matrix` returned matrices should not have values
+    """`compute_similarity_matrix` returned matrices should not have values
         lower than 0.
     """
         
@@ -58,7 +58,7 @@ def test_matrix_min(matrix):
     
     
 def test_matrix_dtype(matrix):
-    """`compute_distance_matrix` returned matrices should have dtype np.float32
+    """`compute_similarity_matrix` returned matrices should have dtype np.float32
     """
         
     assert matrix.dtype == np.float32
@@ -67,16 +67,16 @@ def test_matrix_dtype(matrix):
 @pytest.mark.python
 @pytest.mark.skipif(not IS_CYTHONIZED, reason="libmetgem should be cythonized")
 def test_matrix_python_cython(random_spectra, mz_tolerance, min_matched_peaks):
-    """Cythonized `compute_distance_matrix` and it's fallback Python version
+    """Cythonized `compute_similarity_matrix` and it's fallback Python version
         should give the same results.
     """
     
     mzs, spectra = random_spectra
     
-    matrix_p = compute_distance_matrix.__wrapped__(mzs, spectra,
+    matrix_p = compute_similarity_matrix.__wrapped__(mzs, spectra,
                                                    mz_tolerance,
                                                    min_matched_peaks)
-    matrix_c = compute_distance_matrix(mzs, spectra,
+    matrix_c = compute_similarity_matrix(mzs, spectra,
                                        mz_tolerance,
                                        min_matched_peaks)
     assert pytest.approx(matrix_p) == matrix_c

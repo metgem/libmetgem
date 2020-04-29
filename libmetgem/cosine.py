@@ -5,12 +5,15 @@
 from .common import MZ, INTENSITY
 from ._loader import load_cython
 
+import warnings
 from typing import List, Callable, Tuple
 from enum import IntEnum
 import numpy as np
 import operator
 
-__all__ = ('cosine_score', 'compare_spectra', 'compute_distance_matrix', 'SpectraMatchState')
+__all__ = ('cosine_score', 'compare_spectra',
+           'compute_distance_matrix', 'compute_similarity_matrix',
+           'SpectraMatchState')
 
 @load_cython
 class SpectraMatchState(IntEnum):
@@ -124,11 +127,11 @@ def compare_spectra(spectrum1_mz: float, spectrum1_data: np.ndarray,
     return np.asarray(matches, dtype=np.dtype([('ix1', '<u2'), ('ix2', '<u2'), ('score', '<f8'), ('type', '<u1')]))
     
 @load_cython
-def compute_distance_matrix(mzs: List[float], spectra: List[np.ndarray],
+def compute_similarity_matrix(mzs: List[float], spectra: List[np.ndarray],
                             mz_tolerance: float, min_matched_peaks: float,
                             callback: Callable[[int], bool]=None) -> np.ndarray:
     """
-        Compute pairwise distance matrix of a list of spectra.
+        Compute pairwise similarity matrix of a list of spectra.
     
     Args:
         mzs: list of *m/z* values.
@@ -143,7 +146,7 @@ def compute_distance_matrix(mzs: List[float], spectra: List[np.ndarray],
             computations should stop.
             
     Returns:
-        Pairwise distance matrix of the given spectra.
+        Pairwise similarity matrix of the given spectra.
     
     See Also:
         cosine_score     
@@ -161,3 +164,12 @@ def compute_distance_matrix(mzs: List[float], spectra: List[np.ndarray],
     np.fill_diagonal(matrix, 1)
     matrix[matrix > 1] = 1
     return matrix
+
+def compute_distance_matrix(mzs: List[float], spectra: List[np.ndarray],
+                            mz_tolerance: float, min_matched_peaks: float,
+                            callback: Callable[[int], bool]=None) -> np.ndarray:
+    warnings.warn(
+            "compute_distance_matrix is deprecated, use compute_similarity_matrix instead",
+            DeprecationWarning
+        )
+    return compute_similarity_matrix(mzs, spectra, mz_tolerance, min_matched_peaks, callback=callback)

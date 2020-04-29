@@ -20,7 +20,7 @@ def test_msp_pepmass(valid_msp, ignore_unknown):
     mzs, _, p = valid_msp
     gen = read_msp(str(p), ignore_unknown=ignore_unknown)
     for i, (params, _) in enumerate(gen):
-        assert params['precursormz'] == mzs[i]
+        assert pytest.approx(params['precursormz']) == mzs[i]
         
                 
 @pytest.mark.parametrize('ignore_unknown', [True, False])
@@ -98,9 +98,9 @@ def test_msp_nonumpeaks(invalid_msp, ignore_unknown):
     assert len(data) == len(mzs) - 1
     for i, (params, d) in enumerate(data):
         if i < 2:
-            assert params['precursormz'] == mzs[i]
+            assert pytest.approx(params['precursormz']) == mzs[i]
         else:
-            assert params['precursormz'] == mzs[i+1]
+            assert pytest.approx(params['precursormz']) == mzs[i+1]
        
        
 @pytest.mark.parametrize('ignore_unknown', [True, False])
@@ -129,5 +129,10 @@ def test_msp_python_cython(valid_msp, ignore_unknown):
     gen_p = read_msp.__wrapped__(str(p), ignore_unknown=ignore_unknown)
     gen_c = read_msp(str(p), ignore_unknown=ignore_unknown)
     for (params_p, data_p), (params_c, data_c) in zip(gen_p, gen_c):
-        assert params_p == params_c
+        assert params_p.keys () == params_c.keys()
+        for key in params_p.keys():
+            if isinstance(params_p[key], float):
+                assert pytest.approx(params_p[key]) == params_c[key]
+            else:
+                assert params_p[key] == params_c[key]
         assert pytest.approx(data_p) == data_c
