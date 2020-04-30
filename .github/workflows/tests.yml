@@ -13,7 +13,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        python-version: [3.5, 3.6, 3.7, 3.8]
+        python-version: [3.7] #[3.5, 3.6, 3.7, 3.8]
         os: [ubuntu-latest, windows-latest, macos-latest]
       #fail-fast: false
 
@@ -37,6 +37,9 @@ jobs:
       run: |
         conda install -n base conda-build conda-verify numpy
         conda install numpy cython cxx-compiler
+    - name: Add msbuild to PATH
+      uses: microsoft/setup-msbuild@v1.0.0
+      if: ${{ runner.os == 'Windows' }}
     - name: Build
       shell: bash -l {0}
       run: |
