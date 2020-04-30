@@ -1,0 +1,42 @@
+name: Tests
+
+on:
+  release:
+    types: [ published ]
+    branches: [ master ]
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        python-version: [3.5, 3.6, 3.7, 3.8]
+        os: [ubuntu-latest, windows-latest, macos-latest]
+      #fail-fast: false
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python ${{ matrix.python-version }} (Miniconda)
+      uses: goanpeca/setup-miniconda@v1
+      with:
+        auto-update-conda: true
+        python-version: ${{ matrix.python-version }}
+        channels: conda-forge
+    - name: Conda info
+      shell: bash -l {0}
+      run: |
+        conda info
+        conda list
+        conda config --show-sources
+        conda config --show
+    - name: Install build dependencies
+      shell: bash -l {0}
+      run: conda install -n base anaconda-client conda-build conda-verify numpy
+    - name: Build
+      shell: bash -l {0}
+      run: |
+        conda config --set anaconda_upload yes
+        anaconda login --username ${{ secrets.ANACONDAUSERNAME }} --password ${{ secrets.ANACONDAPASSWORD }}
+        conda build recipe
+        anaconda logout
+        
