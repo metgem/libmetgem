@@ -33,7 +33,7 @@ def read(filename: str, ignore_unknown: bool=False) -> Tuple[dict, np.ndarray]:
     from pyteomics.auxiliary import PyteomicsError
     
     try:
-        for entry in mgf.read(filename, convert_arrays=1, read_charges=True, dtype=np.float32):
+        for entry in mgf.read(filename, convert_arrays=1, read_charges=True, dtype=np.float32, use_index=False):
             params = entry.get('params', {})
             for key in ('pepmass', 'charge'):
                 if key in params and isinstance(params[key], (list, tuple)):

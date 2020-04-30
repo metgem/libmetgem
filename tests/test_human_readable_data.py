@@ -6,15 +6,15 @@ import numpy as np
 import pytest
 
 from libmetgem import human_readable_data, MZ, INTENSITY
-from libmetgem.filter import filter_data
+from funcs import filter_data_f
 
 from data import random_spectrum
 
 
-def test_human_readable_data_random(random_spectrum):
+def test_human_readable_data_random(random_spectrum, filter_data_f):
     parent, data = random_spectrum
 
-    filtered = filter_data(parent, data, 0, 17, 50, 6)
+    filtered = filter_data_f(parent, data, 0, 17, 50, 6)
     data = human_readable_data(filtered)
        
     assert data.shape == filtered.shape

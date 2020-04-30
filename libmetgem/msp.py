@@ -8,32 +8,38 @@ from typing import Tuple, Generator
 import io
 import numpy as np
 import os
+import sys
 
+import ctypes
+import ctypes.util
 
 __all__ = ('read')
 
-def to_float(string: str) -> float:
-    try:
-        return float(string.strip())
-    except ValueError:
-        return 0.
+clib = ctypes.cdll.LoadLibrary('msvcrt.dll' if sys.platform.startswith('win') else ctypes.util.find_library('c'))
+clib.strtod.argtypes = (ctypes.c_char_p, ctypes.POINTER(ctypes.c_char_p))                                                                                                                                     
+clib.strtod.restype = ctypes.c_double
+
+def strtod(s: str) -> float:
+    p = ctypes.c_char_p(0) 
+    s = ctypes.create_string_buffer(s.encode('utf-8')) 
+    result = clib.strtod(s, ctypes.byref(p)) 
+    return result
+
+clib.strtol.argtypes = (ctypes.c_char_p, ctypes.POINTER(ctypes.c_char_p), ctypes.c_int)                                                                                                                                     
+clib.strtol.restype = ctypes.c_long
+
+def strtol(s, base: int = 10) -> int:
+    p = ctypes.c_char_p(0) 
+    s = ctypes.create_string_buffer(s.encode('utf-8')) 
+    result = clib.strtol(s, ctypes.byref(p), base) 
+    return result
 
 def read_data(line: str, f: io.IOBase, num_peaks: int) -> Generator[Tuple[float], None, None]:
     mz = intensity = ''
     icol = False  # whether we are in intensity column or not
     peaks_read = 0
     
-    while True:
-        if line == '\n':
-            return
-            
-        if line[:5].upper() == 'NAME:':
-            try:
-                f.seek(f.tell()-len(line)-1, os.SEEK_SET)
-            except io.UnsupportedOperation:
-                pass
-            return
-        
+    while True:        
         for char in line:
             if char in '()[]{}':  # Ignore brackets
                 continue
@@ -105,6 +111,7 @@ def read(filename: str, ignore_unknown: bool=False) -> Tuple[dict, np.ndarray]:
                     
                 in_data = False
                 yield params, data
+                params = {}
             else:                
                 if line[:5].upper() == 'NAME:':
                     params = {'name': line[5:].strip(), 'synonyms': []}
@@ -112,18 +119,18 @@ def read(filename: str, ignore_unknown: bool=False) -> Tuple[dict, np.ndarray]:
                     data = []
                 elif ':' in line:
                     if line[:10].upper() == 'NUM PEAKS:':
-                        num_peaks = int(line[10:].strip())
+                        num_peaks = strtol(line[10:])
                         in_data = True
                     elif line[:3].upper() == 'MW:':
-                        params['mw'] = int(line[3:].strip())
+                        params['mw'] = strtod(line[3:])
                     elif line[:8].upper() == 'SYNONYM:':
                         params['synonyms'].append(line[8:].strip())
                     elif line[:12].upper() == 'PRECURSORMZ:':
-                        params['precursormz'] = to_float(line[12:])
+                        params['precursormz'] = strtod(line[12:])
                     elif line[:10].upper() == 'EXACTMASS:':
-                        params['exactmass'] = to_float(line[10:])
+                        params['exactmass'] = strtod(line[10:])
                     elif line[:14].upper() == 'RETENTIONTIME:':
-                        params['retentiontime'] = to_float(line[14:])
+                        params['retentiontime'] = strtod(line[14:])
                     elif not ignore_unknown:
                         pos = line.find(':')
                         if pos > 0:
