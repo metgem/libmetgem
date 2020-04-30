@@ -36,7 +36,7 @@ jobs:
       shell: bash -l {0}
       run: |
         conda install -n base conda-build conda-verify numpy
-        conda install numpy cython
+        conda install numpy cython c-compiler
     - name: Build
       shell: bash -l {0}
       run: |
