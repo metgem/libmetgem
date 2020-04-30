@@ -3,13 +3,15 @@ import itertools
 
 import numpy as np
 import pytest
+import warnings
 
 from libmetgem.common import MZ, INTENSITY
-from libmetgem.cosine import compute_similarity_matrix
+from funcs import compute_similarity_matrix_f
 
 __all__ = ('known_filtered_spectrum', 'known_spectrum'
            'known_spectrum_filter_comparison',
            'known_spectra_filter_comparison',
+           'known_cosines', 'known_spectra_comparisons',
            'random_spectrum', 'another_random_spectrum', 'random_spectra',
            'mz_tolerance', 'min_matched_peaks',
            'min_intensity', 'parent_filter_tolerance',
@@ -27,7 +29,6 @@ MATCHED_PEAKS_WINDOWS = (0, 50, 100)
 MIN_MATCHED_PEAKS_SEARCHS = (0, 6, 12)
 PAIRS_MIN_COSINES = (0, 0.3, 0.7)
 TOP_KS = (0, 1, 10)
-
 
 MZS = (723.3371, 885.3909, 643.2885, 643.289, 487.2665, 545.2717)
 SPECTRA = {}
@@ -47,7 +48,15 @@ COSINES = {
     (4, 5): (0.02, 4, 0.5342),
     (0, 2): (0.02, 4, 0.0)
     }
-        
+
+SPECTRA_COMPARISONS = {
+    (0, 1): (0.02, [(0, 0, 0.6465, 0), (5, 1, 0.0473, 0), (7, 3, 0.0209, 0), (14, 4, 0.0102, 0)]),
+    (2, 3): (0.02, [(0, 0, 0.1763, 0), (1, 1, 0.1346, 0), (2, 2, 0.1343, 0), (3,  3, 0.1100, 0), (4, 4, 0.0989, 0),
+                    (5, 5, 0.0961, 0), (6, 6, 0.0951, 0), (7, 7, 0.0704, 0), (8,  8, 0.0426, 0), (9, 9, 0.0417, 0)]),
+    (4, 5): (0.02, [(0, 1, 0.3187, 0), (2, 4, 0.0576, 1), (1, 6, 0.0572, 0), (18, 0, 0.0438, 1), (6, 3, 0.0358, 1),
+                    (17, 5, 0.0211, 1)]),
+    (0, 2): (0.02, [])
+    }
         
 @pytest.fixture(params=range(len(MZS)), scope="session")
 def known_filtered_spectrum(request):
@@ -87,6 +96,15 @@ def known_cosines(request):
                 SPECTRA[request.param[0]],
                 SPECTRA[request.param[1]],
                 *COSINES[request.param])
+    
+@pytest.fixture(params=SPECTRA_COMPARISONS.keys(), scope="session")           
+def known_spectra_comparisons(request):
+    if request.param in SPECTRA_COMPARISONS:
+        return (MZS[request.param[0]],
+                MZS[request.param[1]],
+                SPECTRA[request.param[0]],
+                SPECTRA[request.param[1]],
+                *SPECTRA_COMPARISONS[request.param])
            
            
 def _random_spectrum(seed=0):
@@ -224,7 +242,12 @@ def valid_mgf(tmpdir_factory):
             content.append("{} {}".format(mz, intensity))
         content.append("END IONS")
         content.append("")
-    p.write("\n".join(content))
+        
+    # Add empty lines at thend, they should be ignored
+    content.append("")
+    content.append("")
+    
+    p.write("\n".join(content)) 
     
     return MZS, SPECTRA_UNFILTERED, p
     
@@ -294,11 +317,20 @@ def valid_msp(tmpdir_factory):
         content.append("NAME: {}".format(i+1))
         content.append("FORMULA: C11H22NO4")
         content.append("PRECURSORMZ: {}".format(MZS[i]))
+        content.append("MW: {}".format(MZS[i]))
+        content.append("EXACTMASS: {}".format(MZS[i]))
+        content.append("SYNONYM: foo, bar")
+        content.append("RETENTIONTIME: 2.58")
         content.append("Num Peaks: {}".format(len(SPECTRA_UNFILTERED[i])))
         for mz, intensity in SPECTRA_UNFILTERED[i]:
             content.append("{} {}".format(mz, intensity))
         content.append("")
-    p.write("\n".join(content))
+        
+    # Add empty lines at thend, they should be ignored
+    content.append("")
+    content.append("")
+    
+    p.write("\n".join(content))    
     
     return MZS, SPECTRA_UNFILTERED, p
     
@@ -347,8 +379,14 @@ def invalid_msp(tmpdir_factory, valid_msp, request):
                     line = line.replace(":", "=")
                 elif request.param == "no-pepmass":
                     line = ""
+                elif request.param == "wrong-float":
+                    line += "f"
             elif line.startswith("Num Peaks:") and request.param == "no-num-peaks":
                 line = ""
+            elif request.param == "two-names":
+                line = "NAME: Second name"
+            elif line.startswith("Num Peaks:") and request.param == "num-peaks-zero":
+                line = "Num Peaks: 0"
         content.append(line)
     p.write("\n".join(content))
     
@@ -357,13 +395,13 @@ def invalid_msp(tmpdir_factory, valid_msp, request):
     
 @pytest.fixture(params=list(itertools.product(MZ_TOLERANCES, MIN_MATCHED_PEAKS)),
                 scope='session')
-def matrix(request, random_spectra):
+def matrix(request, random_spectra, compute_similarity_matrix_f):
     """Compute distance matrix for different `mz_tolerance` and
         `min_matched_peaks` combinations.
     """
     
     mzs, spectra = random_spectra
-    m = compute_similarity_matrix(mzs, spectra, request.param[0], request.param[1])
+    m = compute_similarity_matrix_f(mzs, spectra, request.param[0], request.param[1])
     m.flags.writeable = False
     
     return m

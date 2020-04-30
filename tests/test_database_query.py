@@ -11,6 +11,7 @@ from libmetgem import IS_CYTHONIZED, MZ, INTENSITY
 from libmetgem.filter import filter_data
 from libmetgem.cosine import cosine_score
 from libmetgem.database import query
+from funcs import query_f
     
 
 from data import (random_spectra,
@@ -52,7 +53,7 @@ def db(tmpdir_factory, random_spectra, request):
     return p, random_spectra
     
    
-def test_query_random_spectra(db):
+def test_query_random_spectra(db, query_f):
     """Test if looking for a spectra that is for sure in database will
        successfully returns this spectra.
     """
@@ -61,8 +62,8 @@ def test_query_random_spectra(db):
     
     for i, (mz, data) in enumerate(zip(mzs, spectra)):
         filtered = filter_data(mz, data, 0, 17, 50, 6)
-        results = query(str(p), [i], [mz], [filtered], [],
-                        0.02, 0, 0, 17, 50, 6, 0.)
+        results = query_f(str(p), [i], [mz], [filtered], [],
+                          0.02, 0, 0, 17, 50, 6, 0.)
         assert i in results
         seen_i = False
         for r in results[i]:
@@ -78,7 +79,7 @@ def test_query_random_spectra(db):
         
         
 @pytest.mark.parametrize('bank', [[0], [1], [0, 1]])
-def test_query_in_bank(db, bank):
+def test_query_in_bank(db, bank, query_f):
     """Test if looking for a spectra in a specific bank that is for sure in
        database will successfully returns this spectra.
     """
@@ -87,8 +88,8 @@ def test_query_in_bank(db, bank):
     
     for i, (mz, data) in enumerate(zip(mzs, spectra)):
         filtered = filter_data(mz, data, 0, 17, 50, 6)
-        results = query(str(p), [i], [mz], [filtered], bank,
-                        0.02, 0, 0, 17, 50, 6, 0.)
+        results = query_f(str(p), [i], [mz], [filtered], bank,
+                          0.02, 0, 0, 17, 50, 6, 0.)
         ids = []
         if 0 in bank:
             ids.append(i)
@@ -112,7 +113,7 @@ def test_query_in_bank(db, bank):
             else:
                 assert id not in results
 
-def test_query_analog(db):
+def test_query_analog(db, query_f):
     """Build an analog and try to find the original spectrum in the database.
     """
     
@@ -128,8 +129,8 @@ def test_query_analog(db):
         score = cosine_score(mzs[i], filtered_orig,
                              mz, filtered_analog,
                              0.02, 0)
-        results = query(str(p), [i], [mz], [filtered_analog], [],
-                        0.02, 0, 0, 17, 50, 6, 0., 100.)
+        results = query_f(str(p), [i], [mz], [filtered_analog], [],
+                          0.02, 0, 0, 17, 50, 6, 0., 100.)
         assert i in results
         seen_i = False
         for r in results[i]:
@@ -167,4 +168,3 @@ def test_query_python_cython(db):
                 assert r_c['bank_id'] == r_p['bank_id']
                 assert r_c['name'].decode() == r_p['name']
                 assert r_c['score'] == pytest.approx(r_p['score'])
-    

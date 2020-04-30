@@ -11,7 +11,7 @@ from libcpp.vector cimport vector
 from libcpp cimport bool
 from libc.stdlib cimport strtof, strtol
 from libc.string cimport strncpy, strcpy, strcspn, strlen
-from libc.stdio cimport fopen, fclose, fgets, fseek, ftell, SEEK_CUR, FILE
+from libc.stdio cimport fopen, fclose, fgets, FILE
 
 from ._common cimport peak_t, arr_from_peaks_vector
 
@@ -101,11 +101,6 @@ cdef void read_data(char line[MAX_LINE_SIZE], vector[peak_t] *peaklist,
     peaklist.clear()
     while True:
         if line[0] == b'\n':
-            return
-            
-        if strncasecmp(line, 'NAME:', 5) == 0:
-            if ftell(fp) > 0:
-                fseek(fp, -<long>strlen(line)-1, SEEK_CUR)
             return
             
         while line[i] != b'\0':

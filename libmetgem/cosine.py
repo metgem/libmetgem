@@ -159,7 +159,7 @@ def compute_similarity_matrix(mzs: List[float], spectra: List[np.ndarray],
             matrix[i, j] = matrix[j, i] = cosine_score(mzs[i], spectra[i], mzs[j], spectra[j],
                                                        mz_tolerance, min_matched_peaks)
         if callback is not None:
-            if not callback(i-1):
+            if not callback(i):
                 return matrix
     np.fill_diagonal(matrix, 1)
     matrix[matrix > 1] = 1

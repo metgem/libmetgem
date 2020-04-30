@@ -7,6 +7,7 @@ import numpy as np
 
 from libmetgem import IS_CYTHONIZED
 from libmetgem.network import generate_network
+from funcs import generate_network_f
 
 from data import (matrix, random_matrix,
                   pairs_min_cosine, top_k)
@@ -28,17 +29,17 @@ def test_random_matrix(random_matrix):
     assert matrix.dtype == np.float32
     
     
-def test_generate_network_empty():
+def test_generate_network_empty(generate_network_f):
     """An empty matrix should not throw an error but return an empty array.
     """
 
     matrix = np.empty((0,0), dtype=np.float32)
-    interactions = generate_network(matrix, [], 0.65, 10)
+    interactions = generate_network_f(matrix, [], 0.65, 10)
     
     assert interactions.size == 0
     
     
-def test_generate_network_matrix_larger_than_list(random_matrix):
+def test_generate_network_matrix_larger_than_list(random_matrix, generate_network_f):
     """
         If matrix is larger than list, only part of the matrix will be used but
         no error should be thrown.
@@ -49,7 +50,7 @@ def test_generate_network_matrix_larger_than_list(random_matrix):
     mzs = mzs[:-2]
     max_index = matrix.shape[0]
     
-    interactions = generate_network(matrix, mzs, 0, 10)
+    interactions = generate_network_f(matrix, mzs, 0, 10)
     
     assert max_index-1 not in interactions['Source']
     assert max_index-1 not in interactions['Target']
@@ -57,7 +58,7 @@ def test_generate_network_matrix_larger_than_list(random_matrix):
     assert max_index-2 not in interactions['Target']
     
     
-def test_generate_network_list_larger_than_matrix(random_matrix):
+def test_generate_network_list_larger_than_matrix(random_matrix, generate_network_f):
     """
         If list is larger than matrix, only part of the list will be used but
         no error should be thrown.
@@ -68,7 +69,7 @@ def test_generate_network_list_larger_than_matrix(random_matrix):
     mzs = mzs + [1200.14225, 258.4475]
     max_index = len(mzs)
     
-    interactions = generate_network(matrix, mzs, 0, 10)
+    interactions = generate_network_f(matrix, mzs, 0, 10)
     
     assert max_index-1 not in interactions['Source']
     assert max_index-1 not in interactions['Target']
@@ -76,7 +77,7 @@ def test_generate_network_list_larger_than_matrix(random_matrix):
     assert max_index-2 not in interactions['Target']
     
     
-def test_generate_network_all_zero(random_matrix):
+def test_generate_network_all_zero(random_matrix, generate_network_f):
     """
         If all filtering parameters are set to zero, we should get all possibles
         interactions excluding self loops.
@@ -85,12 +86,12 @@ def test_generate_network_all_zero(random_matrix):
     mzs, matrix = random_matrix
     
     max_size = np.count_nonzero(np.triu(matrix)) - matrix.shape[0]
-    interactions = generate_network(matrix, mzs, 0, 0)
+    interactions = generate_network_f(matrix, mzs, 0, 0)
     
     assert interactions.shape[0] == max_size
     
     
-def test_generate_network_high_top_k(random_matrix):
+def test_generate_network_high_top_k(random_matrix, generate_network_f):
     """
         If top_k is high and pairs_min_cosine is zero, we should get all
         possibles interactions excluding self loops.
@@ -100,13 +101,13 @@ def test_generate_network_high_top_k(random_matrix):
 
     max_size = np.count_nonzero(np.triu(matrix)) - matrix.shape[0]
     top_k = matrix.shape[0]
-    interactions = generate_network(matrix, mzs, 0, top_k)
+    interactions = generate_network_f(matrix, mzs, 0, top_k)
     
     assert interactions.shape[0] == max_size
     
     
 @pytest.mark.parametrize("pairs_min_cosine", [1, 2, 3])
-def test_generate_network_high_pairs_min_cosine(random_matrix,
+def test_generate_network_high_pairs_min_cosine(random_matrix, generate_network_f,
                                                 pairs_min_cosine, top_k):
     """
         If pairs_min_cosine is higher than 1, we should get an empty array.
@@ -114,14 +115,14 @@ def test_generate_network_high_pairs_min_cosine(random_matrix,
     
     mzs, matrix = random_matrix
 
-    interactions = generate_network(matrix, mzs,
+    interactions = generate_network_f(matrix, mzs,
                                     pairs_min_cosine, top_k)
     
     assert interactions.size == 0
     
     
 @pytest.mark.parametrize("pairs_min_cosine", [0, 0.3, 0.7, 1])
-def test_generate_network_self_loop(random_matrix,
+def test_generate_network_self_loop(random_matrix, generate_network_f,
                                     pairs_min_cosine, top_k):
     """
         Output array should not include self-loops
@@ -129,7 +130,7 @@ def test_generate_network_self_loop(random_matrix,
     
     mzs, matrix = random_matrix
 
-    interactions = generate_network(matrix, mzs,
+    interactions = generate_network_f(matrix, mzs,
                                     pairs_min_cosine, top_k)
     count = len([source for source, target, _, _ in interactions if source == target])
     
@@ -137,7 +138,7 @@ def test_generate_network_self_loop(random_matrix,
     
 
 @pytest.mark.parametrize("pairs_min_cosine", [-0.2, 0, 0.3, 0.7])    
-def test_generate_network_pairs_min_cosine(random_matrix,
+def test_generate_network_pairs_min_cosine(random_matrix, generate_network_f,
                                            pairs_min_cosine):
     """
         All cosine scores in outputted array should be strictly higher than
@@ -153,7 +154,7 @@ def test_generate_network_pairs_min_cosine(random_matrix,
     matrix[0, 1] = matrix[1, 0] = pairs_min_cosine + 0.1
     matrix[0, 2] = matrix[2, 0] = pairs_min_cosine - 0.1
 
-    interactions = generate_network(matrix, mzs,
+    interactions = generate_network_f(matrix, mzs,
                                     pairs_min_cosine, 0)
                                     
     seen1, seen2 = False, False
@@ -194,4 +195,3 @@ def test_generate_network_python_cython(random_matrix,
             assert pytest.approx(interactions_p[name]) == interactions_c[name]
         else:
             assert np.array_equal(interactions_p[name], interactions_c[name])
-    
