@@ -38,7 +38,7 @@ jobs:
       shell: bash -l {0}
       run: |
         conda config --set anaconda_upload yes
-        anaconda login --username ${{ secrets.ANACONDAUSERNAME }} --password ${{ secrets.ANACONDAPASSWORD }}
+        yes | anaconda login --username ${{ secrets.ANACONDAUSERNAME }} --password ${{ secrets.ANACONDAPASSWORD }}
         conda build recipe
         anaconda logout
         
