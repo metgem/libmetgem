@@ -12,6 +12,9 @@ jobs:
       matrix:
         python-version: [3.5, 3.6, 3.7, 3.8]
         os: [ubuntu-latest, windows-latest, macos-latest]
+        exclude:  # Temporarily disable release for macos and python 3.8 as there is a bug with openblas
+          - os: macos-latest
+            python-version: 3.8
       #fail-fast: false
 
     steps:
@@ -33,7 +36,7 @@ jobs:
       shell: bash -l {0}
       run: |
         conda install -n base conda-build conda-verify numpy
-        conda install anaconda-client 
+        conda install anaconda-client
     - name: Build
       shell: bash -l {0}
       run: |
