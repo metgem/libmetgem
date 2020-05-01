@@ -38,5 +38,5 @@ jobs:
       shell: bash -l {0}
       run: |
         conda config --set anaconda_upload yes
-        conda build recipe --token ${{ secrets.ANACONDA_UPLOAD_TOKEN }} --user metgem
+        conda build recipe --python ${{ matrix.python-version }} --token ${{ secrets.ANACONDA_UPLOAD_TOKEN }} --user metgem
         
