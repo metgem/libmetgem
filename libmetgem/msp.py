@@ -15,18 +15,14 @@ import ctypes.util
 
 __all__ = ('read')
 
-path_libc = ctypes.util.find_library('c')
-if path_libc is None and sys.platform.startswith('win'):
-    path_libc = 'ucrtbase.dll'
+clib = ctypes.cdll.LoadLibrary('msvcrt.dll' if sys.platform.startswith('win') else ctypes.util.find_library('c'))
+clib.strtod.argtypes = (ctypes.c_char_p, ctypes.POINTER(ctypes.c_char_p))                                                                                                                                     
+clib.strtod.restype = ctypes.c_double
 
-clib = ctypes.cdll.LoadLibrary(path_libc)
-clib.strtof.argtypes = (ctypes.c_char_p, ctypes.POINTER(ctypes.c_char_p))                                                                                                                                     
-clib.strtof.restype = ctypes.c_float
-
-def strtof(s: str) -> float:
+def strtod(s: str) -> float:
     p = ctypes.c_char_p(0) 
     s = ctypes.create_string_buffer(s.encode('utf-8')) 
-    result = clib.strtof(s, ctypes.byref(p)) 
+    result = clib.strtod(s, ctypes.byref(p)) 
     return result
 
 clib.strtol.argtypes = (ctypes.c_char_p, ctypes.POINTER(ctypes.c_char_p), ctypes.c_int)                                                                                                                                     
@@ -129,15 +125,15 @@ def read(filename: str, ignore_unknown: bool=False) -> Tuple[dict, np.ndarray]:
                         num_peaks = strtol(line[10:])
                         in_data = True
                     elif line[:3].upper() == 'MW:':
-                        params['mw'] = strtof(line[3:])
+                        params['mw'] = strtod(line[3:])
                     elif line[:8].upper() == 'SYNONYM:':
                         params['synonyms'].append(line[8:].strip())
                     elif line[:12].upper() == 'PRECURSORMZ:':
-                        params['precursormz'] = strtof(line[12:])
+                        params['precursormz'] = strtod(line[12:])
                     elif line[:10].upper() == 'EXACTMASS:':
-                        params['exactmass'] = strtof(line[10:])
+                        params['exactmass'] = strtod(line[10:])
                     elif line[:14].upper() == 'RETENTIONTIME:':
-                        params['retentiontime'] = strtof(line[14:])
+                        params['retentiontime'] = strtod(line[14:])
                     elif not ignore_unknown:
                         pos = line.find(':')
                         if pos > 0:
