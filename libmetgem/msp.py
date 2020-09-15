@@ -45,7 +45,10 @@ def read_data(line: str, f: io.IOBase, num_peaks: int) -> Generator[Tuple[float]
                 continue
             elif char in ' \t,;:\n':  # Delimiter
                 if icol and mz and intensity:
-                    yield float(mz), float(intensity)
+                    mz_f = float(mz)
+                    intensity_f = float(intensity)
+                    if mz_f > 0:
+                        yield mz_f, intensity_f
                     peaks_read += 1
                     if peaks_read >= num_peaks:
                         return

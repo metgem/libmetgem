@@ -287,6 +287,7 @@ def invalid_mgf(tmpdir_factory, valid_mgf, request):
     p = tmpdir_factory.mktemp("invalid", numbered=True).join("invalid.mgf")
     content = []
     i = -1
+    mz_zeroed = False
     for line in mgf.read().split("\n"):
         if line.startswith("BEGIN IONS"):
             i+=1
@@ -301,6 +302,9 @@ def invalid_mgf(tmpdir_factory, valid_mgf, request):
             elif not line.startswith("END IONS") and not "=" in line:
                 if request.param == "comma-data":
                     line = line.replace(".", ",")
+                elif request.param == "mz-zero" and not mz_zeroed:
+                    line = "0\t" + line.split()[1]
+                    mz_zeroed = True
         content.append(line)
     p.write("\n".join(content))
     
@@ -370,9 +374,10 @@ def invalid_msp(tmpdir_factory, valid_msp, request):
     p = tmpdir_factory.mktemp("invalid", numbered=True).join("invalid.msp")
     content = []
     i = -1
+    mz_zeroed = False
     for line in mgf.read().split("\n"):
         if line.startswith("NAME:"):
-            i+=1
+            i += 1
         elif i==2:
             if line.startswith("PRECURSORMZ:"):
                 if request.param == "semicolon":
@@ -387,6 +392,10 @@ def invalid_msp(tmpdir_factory, valid_msp, request):
                 line = "NAME: Second name"
             elif line.startswith("Num Peaks:") and request.param == "num-peaks-zero":
                 line = "Num Peaks: 0"
+            elif line and line[0].isnumeric() and request.param == "mz-zero" and not mz_zeroed:
+                line = "0\t" + line.split()[1]
+                mz_zeroed = True
+
         content.append(line)
     p.write("\n".join(content))
     

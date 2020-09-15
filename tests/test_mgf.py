@@ -123,6 +123,21 @@ def test_mgf_noions(noions_mgf, ignore_unknown, read_mgf_f):
     assert data[0][1].size == 0
     assert data[0][1].shape == (0, 2)
             
+@pytest.mark.parametrize('invalid_mgf', ["mz-zero"],
+    indirect=True)
+def test_mgf_mz_zero(invalid_mgf, read_mgf_f):
+    """A peak with an mz equal to zero should be ignored."""
+    
+    mzs, spectra, p = invalid_mgf
+    data = list(read_mgf_f(str(p), ignore_unknown=True))
+    assert len(data) == len(mzs)
+    for i, (params, d) in enumerate(data):
+        if i == 2:
+            assert len(d) == len(spectra[i]) - 1
+            assert pytest.approx(d) == spectra[i][1:]
+        else:
+            assert len(d) == len(spectra[i])
+            assert pytest.approx(d) == spectra[i]
 
 @pytest.mark.python
 @pytest.mark.skipif(not IS_CYTHONIZED, reason="libmetgem should be cythonized")

@@ -114,9 +114,12 @@ cdef void read_data(char line[MAX_LINE_SIZE], vector[peak_t] *peaklist,
                 peak.mz = value
                 peak.intensity = strtof(ptr, &ptr2)
                 peaklist.push_back(peak)
-                peaks_read += 1
-                if peaks_read >= num_peaks:
-                    return
+            else:
+                break
+                
+            peaks_read += 1
+            if peaks_read >= num_peaks:
+                return
                     
             value = strtof(ptr2, &ptr)
             if ptr == ptr2:

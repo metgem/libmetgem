@@ -12,7 +12,7 @@ if HAS_CYTHON:
 
 MAJOR = 0
 MINOR = 4
-MICRO = 0
+MICRO = 1
 ISRELEASED = True
 VERSION = '%d.%d.%d' % (MAJOR, MINOR, MICRO)
 SRC_PATH = "libmetgem"
@@ -193,7 +193,8 @@ setup(
                    "Programming Language :: Python :: 3.4",
                    "Programming Language :: Python :: 3.5",
                    "Programming Language :: Python :: 3.6",
-                   "Programming Language :: Python :: 3.7"],
+                   "Programming Language :: Python :: 3.7",
+                   "Programming Language :: Python :: 3.8"],
     ext_modules=ext_modules,
     packages = find_packages(),
     include_dirs=include_dirs,
