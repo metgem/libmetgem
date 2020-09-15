@@ -8,13 +8,18 @@ from typing import Tuple, Generator
 import io
 import numpy as np
 import os
+import sys
 
 import ctypes
 import ctypes.util
 
 __all__ = ('read')
 
-clib = ctypes.cdll.LoadLibrary(ctypes.util.find_library('c'))
+path_libc = ctypes.util.find_library('c')
+if path_libc is None and sys.platform.startswith('win'):
+    path_libc = 'ucrtbase.dll'
+
+clib = ctypes.cdll.LoadLibrary(path_libc)
 clib.strtof.argtypes = (ctypes.c_char_p, ctypes.POINTER(ctypes.c_char_p))                                                                                                                                     
 clib.strtof.restype = ctypes.c_float
 
@@ -44,7 +49,10 @@ def read_data(line: str, f: io.IOBase, num_peaks: int) -> Generator[Tuple[float]
                 continue
             elif char in ' \t,;:\n':  # Delimiter
                 if icol and mz and intensity:
-                    yield float(mz), float(intensity)
+                    mz_f = float(mz)
+                    intensity_f = float(intensity)
+                    if mz_f > 0:
+                        yield mz_f, intensity_f
                     peaks_read += 1
                     if peaks_read >= num_peaks:
                         return

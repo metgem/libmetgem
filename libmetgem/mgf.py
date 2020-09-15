@@ -41,6 +41,8 @@ def read(filename: str, ignore_unknown: bool=False) -> Tuple[dict, np.ndarray]:
 
             mz = entry.get('m/z array', None)
             intensity = entry.get('intensity array', None)
-            yield params, np.column_stack((mz, intensity))
+            data = np.column_stack((mz, intensity))
+            data = data[data[:, 0] > 0] # Filter out peaks with mz=0
+            yield params, data
     except PyteomicsError:
         pass

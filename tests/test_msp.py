@@ -157,6 +157,22 @@ def test_msp_noions(noions_msp, ignore_unknown, read_msp_f):
     assert len(data) == 1
     assert data[0][1].size == 0
     assert data[0][1].shape == (0, 2)
+
+@pytest.mark.parametrize('invalid_msp', ["mz-zero"],
+    indirect=True)
+def test_msp_mz_zero(invalid_msp, read_msp_f):
+    """A peak with an mz equal to zero should be ignored."""
+    
+    mzs, spectra, p = invalid_msp
+    data = list(read_msp_f(str(p), ignore_unknown=True))
+    assert len(data) == len(mzs)
+    for i, (params, d) in enumerate(data):
+        if i == 2:
+            assert len(d) == len(spectra[i]) - 1
+            assert pytest.approx(d) == spectra[i][1:]
+        else:
+            assert len(d) == len(spectra[i])
+            assert pytest.approx(d) == spectra[i]
             
 
 @pytest.mark.python
