@@ -15,7 +15,6 @@ from libc.stdio cimport fopen, fclose, fgets, FILE
 
 from ._common cimport peak_t, arr_from_peaks_vector
 
-DEF MAX_NAME_SIZE = 514
 DEF MAX_KEY_SIZE = 64
 DEF MAX_VALUE_SIZE = 2048
 DEF MAX_LINE_SIZE = 2051 # 2048 characters + '\r\n' + '\0'
@@ -129,7 +128,7 @@ cdef void read_data(char line[MAX_LINE_SIZE], vector[peak_t] *peaklist,
             return
            
            
-cdef tuple read_entry(char name[MAX_NAME_SIZE], FILE * fp, bint ignore_unknown=False):
+cdef tuple read_entry(char name[MAX_VALUE_SIZE], FILE * fp, bint ignore_unknown=False):
     """Read a spectrum entry (params and peaklist) from file
     """
     
@@ -200,7 +199,7 @@ def read(str filename, bint ignore_unknown=False):
         tuple entry
         char line[MAX_LINE_SIZE]
         FILE *fp
-        char name[MAX_NAME_SIZE]
+        char name[MAX_VALUE_SIZE]
 
     fname_bytes = filename.encode(CHARSET)
         
