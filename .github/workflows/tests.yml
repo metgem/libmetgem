@@ -41,7 +41,7 @@ jobs:
         conda install -n base conda-build conda-verify numpy
         conda install numpy cython cxx-compiler
     - name: Add msbuild to PATH
-      uses: microsoft/setup-msbuild@v1.0.2
+      uses: microsoft/setup-msbuild@v1
       if: ${{ runner.os == 'Windows' }}
     - name: Build
       shell: bash -l {0}
