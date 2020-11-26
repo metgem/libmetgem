@@ -1,4 +1,4 @@
-|travis| |appveyor| |codecov| |RTD|
+|tests| |release| |codecov| |RTD|
 
 libmetgem
 ---------
@@ -10,13 +10,13 @@ A library for molecular networking based on MS/MS spectra.
    :target: https://libmetgem.readthedocs.io/en/latest/?badge=latest
    :alt: Documentation Status
   
-.. |travis| image:: https://travis-ci.org/metgem/libmetgem.svg?branch=master
-   :target: https://travis-ci.org/metgem/libmetgem
-   :alt: Linux and MacOS Build Status
+.. |tests| image:: https://github.com/metgem/libmetgem/workflows/Tests/badge.svg
+   :target: https://github.com/metgem/libmetgem/actions?query=workflow%3ATests
+   :alt: Test Status
    
-.. |appveyor| image:: https://ci.appveyor.com/api/projects/status/it6mtjwsgtndq52v?svg=true
-  :target: https://ci.appveyor.com/project/n-elie/libmetgem
-  :alt: Windows Build Status
+.. |release| image:: https://github.com/metgem/libmetgem/workflows/Release/badge.svg
+   :target: https://github.com/metgem/libmetgem/actions?query=workflow%3ARelease
+   :alt: Release Status
     
 .. |codecov| image:: https://codecov.io/gh/metgem/libmetgem/branch/master/graph/badge.svg
   :target: https://codecov.io/gh/metgem/libmetgem
