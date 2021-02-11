@@ -13,7 +13,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        python-version: [3.6, 3.7, 3.8, 3.9]
+        python-version: [3.7, 3.8, 3.9]
         os: [ubuntu-latest, windows-latest, macos-latest]
         # exclude:  # Temporarily disable release for macos and python 3.8 as there is a bug with openblas
           # - os: macos-latest
@@ -39,7 +39,7 @@ jobs:
       shell: bash -l {0}
       run: |
         conda install -n base conda-build conda-verify numpy
-        conda install numpy cython cxx-compiler
+        conda install numpy cython cxx-compiler scipy
     - name: Add msbuild to PATH
       uses: microsoft/setup-msbuild@v1
       if: ${{ runner.os == 'Windows' }}
