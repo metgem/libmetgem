@@ -155,13 +155,13 @@ if HAS_CYTHON:
                             compile_time_env={'WIN32': sys.platform == 'win32'},
                             compiler_directives=directives)
         
-    install_requires = ["numpy"]
+    install_requires = ["numpy", "scipy"]
     setup_requires = ["cython>=0.28"] # Need Cython>=0.28 for read-only memoryview
     include_dirs = [np.get_include()]
 else:
     ext_modules = []
     setup_requires = []
-    install_requires = ["numpy", "pyteomics"]
+    install_requires = ["numpy", "pyteomics", "scipy"]
     include_dirs = []
 
 write_version_py(os.path.join('libmetgem', '_version.py'))
