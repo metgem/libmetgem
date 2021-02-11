@@ -6,10 +6,11 @@ from .common import MZ, INTENSITY
 from ._loader import load_cython
 
 import warnings
-from typing import List, Callable, Tuple
+from typing import List, Callable, Tuple, Union
 from enum import IntEnum
 import numpy as np
 import operator
+from scipy.sparse import csr_matrix
 
 __all__ = ('cosine_score', 'compare_spectra',
            'compute_distance_matrix', 'compute_similarity_matrix',
@@ -129,7 +130,7 @@ def compare_spectra(spectrum1_mz: float, spectrum1_data: np.ndarray,
 @load_cython
 def compute_similarity_matrix(mzs: List[float], spectra: List[np.ndarray],
                             mz_tolerance: float, min_matched_peaks: float,
-                            callback: Callable[[int], bool]=None) -> np.ndarray:
+                            callback: Callable[[int], bool]=None, dense_output: bool=True) -> Union[np.ndarray, csr_matrix]:
     """
         Compute pairwise similarity matrix of a list of spectra.
     
@@ -144,6 +145,8 @@ def compute_similarity_matrix(mzs: List[float], spectra: List[np.ndarray],
             parameter (`int`) is the number of spectra computed since last call.
             It should return True if processing should continue, or False if
             computations should stop.
+        dense_output: whether the returned value should be a csr sparse matrix
+            or a dense numpy array.
             
     Returns:
         Pairwise similarity matrix of the given spectra.
@@ -153,23 +156,45 @@ def compute_similarity_matrix(mzs: List[float], spectra: List[np.ndarray],
     """
     
     size = len(mzs)
-    matrix = np.empty((size, size), dtype=np.float32)
-    for i in range(size):
-        for j in range(i):
-            matrix[i, j] = matrix[j, i] = cosine_score(mzs[i], spectra[i], mzs[j], spectra[j],
-                                                       mz_tolerance, min_matched_peaks)
-        if callback is not None:
-            if not callback(i):
-                return matrix
-    np.fill_diagonal(matrix, 1)
-    matrix[matrix > 1] = 1
-    return matrix
-
-def compute_distance_matrix(mzs: List[float], spectra: List[np.ndarray],
-                            mz_tolerance: float, min_matched_peaks: float,
-                            callback: Callable[[int], bool]=None) -> np.ndarray:
-    warnings.warn(
-            "compute_distance_matrix is deprecated, use compute_similarity_matrix instead",
-            DeprecationWarning
-        )
-    return compute_similarity_matrix(mzs, spectra, mz_tolerance, min_matched_peaks, callback=callback)
+    if dense_output:
+        matrix = np.empty((size, size), dtype=np.float32)
+        for i in range(size):
+            for j in range(i):
+                matrix[i, j] = matrix[j, i] = cosine_score(mzs[i], spectra[i], mzs[j], spectra[j],
+                                                           mz_tolerance, min_matched_peaks)
+            if callback is not None:
+                if not callback(i):
+                    return
+        np.fill_diagonal(matrix, 1)
+        matrix[matrix > 1] = 1
+    
+        return matrix
+    else:
+        data = []
+        indices = []
+        indptr = []
+        count = 0
+        for i in range(size):
+            data.append(1)
+            indices.append(i)
+            indptr.append(count)
+            count += 1
+            for j in range(i+1, size):
+                score = cosine_score(mzs[i], spectra[i], mzs[j], spectra[j],
+                                     mz_tolerance, min_matched_peaks)
+                if score > 0:
+                    data.append(min(score, 1))
+                    indices.append(j)
+                    count += 1
+                if callback is not None:
+                    if not callback(i):
+                        return
+        indptr.append(count)
+        
+        data = np.asarray(data, dtype=np.float32)
+        indices = np.asarray(indices, dtype=np.int32)
+        indptr = np.asarray(indptr, dtype=np.int32)
+        matrix = csr_matrix((data, indices, indptr), dtype=np.float32)
+        matrix = matrix + matrix.T 
+        matrix.setdiag(1)
+        return matrix

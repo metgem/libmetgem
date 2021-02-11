@@ -4,6 +4,7 @@
 import warnings
 
 cimport cython
+cimport openmp
 from cython.parallel import prange
 from cython.view cimport array as cvarray
 import numpy as np
@@ -13,6 +14,7 @@ from libcpp.algorithm cimport sort
 from libcpp.vector cimport vector
 from libc.math cimport fabs
 from libc.stdint cimport uint16_t, uint8_t
+from scipy.sparse import csr_matrix
 
 cdef extern from "<numeric>" namespace "std" nogil:
     T accumulate[Iter, T](Iter first, Iter last, T init)
@@ -121,12 +123,12 @@ cdef double cosine_score_nogil(double spectrum1_mz,
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-cdef float[:,:] compute_similarity_matrix_nogil(vector[double] mzvec,
-                                                vector[peak_t *] datavec,
-                                                vector[np.npy_intp] data_sizes,
-                                                double mz_tolerance,
-                                                int min_matched_peaks,
-                                                object callback=None):
+cdef float[:,:] compute_similarity_matrix_dense_nogil(vector[double] mzvec,
+                                                      vector[peak_t *] datavec,
+                                                      vector[np.npy_intp] data_sizes,
+                                                      double mz_tolerance,
+                                                      int min_matched_peaks,
+                                                      object callback=None):
     cdef:
         int i, j
         size_t size = mzvec.size()
@@ -146,6 +148,52 @@ cdef float[:,:] compute_similarity_matrix_nogil(vector[double] mzvec,
                         return matrix
     
     return matrix
+    
+    
+@cython.boundscheck(False)
+@cython.wraparound(False)
+cdef (vector[float], vector[int], vector[int]) compute_similarity_matrix_sparse_nogil(
+           vector[double] mzvec,
+           vector[peak_t *] datavec,
+           vector[np.npy_intp] data_sizes,
+           double mz_tolerance,
+           int min_matched_peaks,
+           object callback=None):
+    cdef:
+        int i, j
+        size_t size = mzvec.size()
+        vector[float] data
+        vector[int] col_ind
+        vector[int] row_ind
+        float score
+        bool has_callback = callback is not None
+        openmp.omp_lock_t lock
+    
+    openmp.omp_init_lock(&lock)
+    
+    with nogil:
+        for i in prange(<int>size, schedule='guided'):
+            openmp.omp_set_lock(&lock)
+            data.push_back(1)
+            col_ind.push_back(i)
+            row_ind.push_back(i)
+            openmp.omp_unset_lock(&lock)
+            for j in range(i):
+                score = <float> cosine_score_nogil(mzvec[i], datavec[i], data_sizes[i],
+                                                   mzvec[j], datavec[j], data_sizes[j],
+                                                   mz_tolerance, min_matched_peaks)
+                if score > 0:
+                    openmp.omp_set_lock(&lock)
+                    data.push_back(min(score, 1))
+                    col_ind.push_back(i)
+                    row_ind.push_back(j)
+                    openmp.omp_unset_lock(&lock)
+            if has_callback:
+                with gil:
+                    if not callback(i):
+                        return data, row_ind, col_ind
+    
+    return data, row_ind, col_ind
 
 def cosine_score(double spectrum1_mz,
                  np.ndarray[np.float32_t, ndim=2] spectrum1_data,
@@ -176,7 +224,7 @@ def compare_spectra(double spectrum1_mz,
 
 def compute_similarity_matrix(vector[double] mzvec, list datavec,
                               double mz_tolerance, int min_matched_peaks,
-                              object callback=None):
+                              object callback=None, dense_output=True):
     cdef:
         np.ndarray[np.float32_t, ndim=2] tmp_array
         size_t size = mzvec.size()
@@ -190,16 +238,13 @@ def compute_similarity_matrix(vector[double] mzvec, list datavec,
         data_p[i] = <peak_t*>np_arr_pointer(tmp_array)
         data_sizes[i] = tmp_array.shape[0]
         
-    matrix = np.asarray(compute_similarity_matrix_nogil(mzvec, data_p, data_sizes, mz_tolerance, min_matched_peaks, callback))
-    matrix[matrix>1] = 1
+    if dense_output:
+        matrix = np.asarray(compute_similarity_matrix_dense_nogil(mzvec, data_p, data_sizes, mz_tolerance, min_matched_peaks, callback))
+        matrix[matrix>1] = 1
+    else:
+        data, col_ind, row_ind = compute_similarity_matrix_sparse_nogil(mzvec, data_p, data_sizes, mz_tolerance, min_matched_peaks, callback)
+        matrix = csr_matrix((data, (row_ind, col_ind)), dtype=np.float32)
+        matrix = matrix + matrix.T 
+        matrix.setdiag(1)
+        
     return matrix
-    
-def compute_distance_matrix(vector[double] mzvec, list datavec,
-                            double mz_tolerance, int min_matched_peaks,
-                            object callback=None):
-    warnings.warn(
-            "compute_distance_matrix is deprecated, use compute_similarity_matrix instead",
-            DeprecationWarning
-        )
-    return compute_similarity_matrix(mzvec, datavec, mz_tolerance, min_matched_peaks, callback=callback)
-    

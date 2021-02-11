@@ -6,7 +6,7 @@ import pytest
 import numpy as np
 
 from libmetgem import IS_CYTHONIZED
-from libmetgem.cosine import compute_similarity_matrix, compute_distance_matrix
+from libmetgem.cosine import compute_similarity_matrix
 
 from data import matrix, random_spectra, mz_tolerance, min_matched_peaks
 from funcs import compute_similarity_matrix_f
@@ -63,6 +63,24 @@ def test_matrix_dtype(matrix):
     """
         
     assert matrix.dtype == np.float32
+    
+    
+@pytest.mark.python
+def test_matrix_sparse(random_spectra, mz_tolerance, min_matched_peaks):
+    """Cythonized `compute_similarity_matrix` and it's fallback Python version
+        should give the same results.
+    """
+    
+    mzs, spectra = random_spectra
+    
+    matrix_s = compute_similarity_matrix(mzs, spectra,
+                                         mz_tolerance,
+                                         min_matched_peaks,
+                                         dense_output=False)
+    matrix = compute_similarity_matrix(mzs, spectra,
+                                       mz_tolerance,
+                                       min_matched_peaks)
+    assert pytest.approx(matrix_s.toarray()) == matrix
 
     
 @pytest.mark.python
@@ -81,17 +99,7 @@ def test_matrix_python_cython(random_spectra, mz_tolerance, min_matched_peaks):
                                        mz_tolerance,
                                        min_matched_peaks)
     assert pytest.approx(matrix_p) == matrix_c
-    
-    
-def test_matrix_warnings(random_spectra, mz_tolerance, min_matched_peaks, compute_similarity_matrix_f):
-    """`compute_distance_matrix` is deprecated. It should call `compute_similarity_matrix' with the same args"""
-    
-    mzs, spectra = random_spectra
-    
-    with pytest.deprecated_call():
-        matrix1 = compute_distance_matrix(mzs, spectra, mz_tolerance, min_matched_peaks)
-    matrix2 = compute_similarity_matrix_f(mzs, spectra, mz_tolerance, min_matched_peaks)
-    assert pytest.approx(matrix1) == matrix2
+
 
 def test_matrix_callback_count(random_spectra, mz_tolerance, min_matched_peaks, mocker, compute_similarity_matrix_f):
     """callback shoud be called one times per spectrum."""
