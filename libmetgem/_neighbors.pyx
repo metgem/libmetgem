@@ -54,9 +54,9 @@ def kneighbors_graph_from_similarity_matrix(matrix: csr_matrix, int n_neighbors)
         np.ndarray[np.float32_t, ndim=1] m_data = matrix.data
         np.ndarray[np.float32_t, ndim=1] r_data = np.empty(n_nonzero, dtype=np.float32)
         np.ndarray[int, ndim=1] m_indices = matrix.indices
-        np.ndarray[int, ndim=1] r_indices = np.empty(n_nonzero, dtype=int)
+        np.ndarray[int, ndim=1] r_indices = np.empty(n_nonzero, dtype=np.int32)
         np.ndarray[int, ndim=1] m_indptr = matrix.indptr
-        np.ndarray[int, ndim=1] r_indptr = np.arange(0, n_nonzero + 1, n_neighbors+1)
+        np.ndarray[int, ndim=1] r_indptr = np.arange(0, n_nonzero + 1, n_neighbors+1, dtype=np.int32)
         
     if n_neighbors > n_samples:
         raise ValueError("Expected n_neighbors <= n_samples,  but n_samples = {n_samples}, n_neighbors = {n_neighbors}")
