@@ -7,7 +7,6 @@ cimport numpy as np
 from libcpp cimport bool
 from libcpp.vector cimport vector
 from libcpp.algorithm cimport (sort, partial_sort)
-from libcpp.vector cimport vector
 from libc.math cimport fabs
 
 ctypedef struct interaction_t:

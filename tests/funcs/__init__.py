@@ -9,6 +9,7 @@ from libmetgem.msp import read as read_msp
 from libmetgem.filter import filter_data, filter_data_multi
 from libmetgem.cosine import cosine_score, compare_spectra
 from libmetgem.database import query
+from libmetgem.neighbors import kneighbors_graph_from_similarity_matrix
 
 VARIANTS_TO_TEST = ["python"]
 if IS_CYTHONIZED:
@@ -35,7 +36,11 @@ class FuncWrapper:
     def __repr__(self):
         return self.__str__()
         
-    
+  
+@pytest.fixture(params=VARIANTS_TO_TEST, scope='session')
+def kneighbors_graph_from_similarity_matrix_f(request):
+    return FuncWrapper(kneighbors_graph_from_similarity_matrix, request.param)
+  
 @pytest.fixture(params=VARIANTS_TO_TEST, scope='session')
 def compute_similarity_matrix_f(request):
     return FuncWrapper(compute_similarity_matrix, request.param)

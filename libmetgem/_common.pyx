@@ -83,3 +83,11 @@ cdef void *np_arr_pointer(np.ndarray[numeric, ndim=2] data):
     if not data.flags['C_CONTIGUOUS']:
         data = np.ascontiguousarray(data, dtype=data.dtype)
     return <void *>&data[0, 0]
+    
+
+@cython.boundscheck(False)
+@cython.wraparound(False)
+cdef numeric *np_arr_pointer_1d(np.ndarray[numeric, ndim=1] data):
+    if not data.flags['C_CONTIGUOUS']:
+        data = np.ascontiguousarray(data, dtype=data.dtype)
+    return <numeric *>&data[0]

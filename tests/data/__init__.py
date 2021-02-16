@@ -6,7 +6,7 @@ import pytest
 import warnings
 
 from libmetgem.common import MZ, INTENSITY
-from funcs import compute_similarity_matrix_f
+from funcs import compute_similarity_matrix_f, kneighbors_graph_from_similarity_matrix_f
 
 __all__ = ('known_filtered_spectrum', 'known_spectrum'
            'known_spectrum_filter_comparison',
@@ -19,7 +19,7 @@ __all__ = ('known_filtered_spectrum', 'known_spectrum'
            'pairs_min_cosine', 'top_k',
            'valid_mgf', 'invalid_mgf', 'empty_mgf', 'noions_mgf',
            'valid_msp', 'invalid_msp', 'empty_msp', 'noions_msp',
-           'matrix', 'random_matrix')
+           'matrix', 'sparse_matrix', 'neighbors_graph', 'random_matrix')
 
 MZ_TOLERANCES = (0.02, 0.05, 1.0)
 MIN_MATCHED_PEAKS = (0, 4, 6)
@@ -405,20 +405,42 @@ def invalid_msp(tmpdir_factory, valid_msp, request):
 @pytest.fixture(params=list(itertools.product(MZ_TOLERANCES, MIN_MATCHED_PEAKS)),
                 scope='session')
 def matrix(request, random_spectra, compute_similarity_matrix_f):
-    """Compute distance matrix for different `mz_tolerance` and
+    """Compute similarity matrix for different `mz_tolerance` and
         `min_matched_peaks` combinations.
     """
     
     mzs, spectra = random_spectra
-    m = compute_similarity_matrix_f(mzs, spectra, request.param[0], request.param[1])
+    m = compute_similarity_matrix_f(mzs, spectra, request.param[0], request.param[1], dense_output=True)
     m.flags.writeable = False
     
     return m
     
     
+@pytest.fixture(params=list(itertools.product(MZ_TOLERANCES, MIN_MATCHED_PEAKS)),
+                scope='session')
+def sparse_matrix(request, random_spectra, compute_similarity_matrix_f):
+    """Compute similarity matrix for different `mz_tolerance` and
+        `min_matched_peaks` combinations.
+    """
+    
+    mzs, spectra = random_spectra
+    m = compute_similarity_matrix_f(mzs, spectra, request.param[0], request.param[1], dense_output=False)
+    
+    return m
+    
+    
+@pytest.fixture(params=[0, 5, 9],
+                scope='session')
+def neighbors_graph(request, sparse_matrix, kneighbors_graph_from_similarity_matrix_f):
+    """Compute neighbors graph for different matrix and n_neighbors combinations."""
+    m = kneighbors_graph_from_similarity_matrix_f(sparse_matrix, n_neighbors=request.param)
+    
+    return request.param, m
+    
+    
 @pytest.fixture(params=range(10), scope="session")
 def random_matrix(request):
-    """Creates a few random distance matrix.
+    """Creates a few random similarity matrix.
     """
     
     np.random.seed(request.param)

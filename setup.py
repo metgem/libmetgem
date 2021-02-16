@@ -11,7 +11,7 @@ if HAS_CYTHON:
     from Cython.Build import cythonize
 
 MAJOR = 0
-MINOR = 5
+MINOR = 6
 MICRO = 0
 ISRELEASED = True
 VERSION = '%d.%d.%d' % (MAJOR, MINOR, MICRO)
@@ -145,6 +145,11 @@ if HAS_CYTHON:
             Extension(
                 "libmetgem._network",
                 [os.path.join(SRC_PATH, "_network.pyx")]
+            ),
+            Extension(
+                "libmetgem._neighbors",
+                [os.path.join(SRC_PATH, "_neighbors.pyx"),
+                 os.path.join(SRC_PATH, "argpartition.cpp")]
             )
         ]
     
