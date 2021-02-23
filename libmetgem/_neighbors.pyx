@@ -4,12 +4,8 @@
 import numpy as np
 from scipy.sparse import csr_matrix
 cimport numpy as np
-cimport cython
 from libcpp.vector cimport vector
-from cython cimport numeric
-from cython.parallel import prange
-from libcpp cimport bool
-from libcpp.algorithm cimport partial_sort
+from cython.parallel import prange, parallel
 
 from ._common cimport np_arr_pointer_1d
 
@@ -24,28 +20,31 @@ cdef void _kneighbors_graph_from_similarity_matrix_nogil(
         int n_samples, int n_neighbors,
         np.float32_t *r_data, int *r_indices, int *r_indptr) nogil:
     cdef:
-        vector[np.float32_t] row = vector[np.float32_t](n_samples, 1.)
-        vector[int] ind = vector[int](n_neighbors)
-        vector[int] inds = vector[int](n_samples)
+        vector[np.float32_t] row
+        vector[int] ind
+        vector[int] inds
         int r_start, r_end, index
         int i, j
 
-    for i in prange(n_samples):
-        r_start = m_indptr[i]
-        r_end = m_indptr[i+1]
-        for j, index in enumerate(range(r_start, r_end)):
-            inds[j] = m_indices[index]
-            row[inds[j]] = 1. - m_data[index]
-            
-        ind = argpartition(row, n_neighbors)
+    with nogil, parallel():
+        row = vector[np.float32_t](n_samples, 1.)
+        inds = vector[int](n_samples)
+        
+        for i in prange(n_samples, schedule='guided'):           
+            r_start = m_indptr[i]
+            r_end = m_indptr[i+1]
+            for j, index in enumerate(range(r_start, r_end)):
+                inds[j] = m_indices[index]
+                row[inds[j]] = 1. - m_data[index]
+                
+            ind = argpartition(row, n_neighbors)
 
-        for j in range(n_neighbors+1):
-            r_data[r_indptr[i]+j] = row[ind[j]]
-            r_indices[r_indptr[i]+j] = ind[j]
-            
-        for j in range(r_end-r_start):
-            row[inds[j]] = 1.
-
+            for j in range(n_neighbors+1):
+                r_data[r_indptr[i]+j] = row[ind[j]]
+                r_indices[r_indptr[i]+j] = ind[j]
+                
+            for j in range(r_end-r_start):
+                row[inds[j]] = 1.
 
 def kneighbors_graph_from_similarity_matrix(matrix: csr_matrix, int n_neighbors):
     cdef:
