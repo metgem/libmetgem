@@ -12,7 +12,7 @@ if HAS_CYTHON:
 
 MAJOR = 0
 MINOR = 6
-MICRO = 1
+MICRO = 2
 ISRELEASED = True
 VERSION = '%d.%d.%d' % (MAJOR, MINOR, MICRO)
 SRC_PATH = "libmetgem"
@@ -148,8 +148,7 @@ if HAS_CYTHON:
             ),
             Extension(
                 "libmetgem._neighbors",
-                [os.path.join(SRC_PATH, "_neighbors.pyx"),
-                 os.path.join(SRC_PATH, "argpartition.cpp")],
+                [os.path.join(SRC_PATH, "_neighbors.pyx")],
                 extra_compile_args=[OPENMP_FLAGS],
                 extra_link_args=[OPENMP_FLAGS]
             )

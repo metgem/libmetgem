@@ -76,6 +76,15 @@ cdef np.ndarray arr_from_score_vector(vector[score_t] v):
     array_wrapper = ArrayWrapper((v.size(), 3), dtype)
     array_wrapper.set_data(v.data())    
     return np.array(array_wrapper)
+
+@cython.boundscheck(False)
+@cython.wraparound(False)   
+cdef np.ndarray arr_from_1d_vector(vector[numeric] v, np.dtype dtype):
+    if v.empty():
+        return np.empty((0, 1), dtype=dtype)
+    array_wrapper = ArrayWrapper((v.size(),), dtype)
+    array_wrapper.set_data(v.data())    
+    return np.array(array_wrapper)
    
 @cython.boundscheck(False)
 @cython.wraparound(False)
@@ -83,11 +92,3 @@ cdef void *np_arr_pointer(np.ndarray[numeric, ndim=2] data):
     if not data.flags['C_CONTIGUOUS']:
         data = np.ascontiguousarray(data, dtype=data.dtype)
     return <void *>&data[0, 0]
-    
-
-@cython.boundscheck(False)
-@cython.wraparound(False)
-cdef numeric *np_arr_pointer_1d(np.ndarray[numeric, ndim=1] data):
-    if not data.flags['C_CONTIGUOUS']:
-        data = np.ascontiguousarray(data, dtype=data.dtype)
-    return <numeric *>&data[0]

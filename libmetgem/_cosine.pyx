@@ -21,13 +21,15 @@ cdef extern from "<numeric>" namespace "std" nogil:
     T accumulate[Iter, T, BinaryOperation](Iter first, Iter last, T init, BinaryOperation op) except +
 
 from ._common cimport (score_t, np_arr_pointer,
-                       arr_from_score_vector)
+                       arr_from_score_vector,
+                       arr_from_1d_vector)
                        
 cdef double addScore(double sum, const score_t &b) nogil:
     return sum + b.value
   
 cdef bool compareByScore(const score_t &a, const score_t &b) nogil:
     return a.value > b.value
+
 
 cdef vector[score_t] compare_spectra_nogil(double spectrum1_mz,
                                            peak_t *spectrum1_data,
@@ -96,9 +98,18 @@ cdef vector[score_t] compare_spectra_nogil(double spectrum1_mz,
             peak_used1[ix1] = 1
             peak_used2[ix2] = 1
             matches.push_back(scores[i])
+            
+    # Free memory
+    matches.shrink_to_fit()
+    scores.clear()
+    scores.shrink_to_fit()
+    peak_used1.clear()
+    peak_used1.shrink_to_fit()
+    peak_used2.clear()
+    peak_used2.shrink_to_fit()
 
     return matches
-    
+
 cdef double cosine_score_nogil(double spectrum1_mz,
                                peak_t *spectrum1_data,
                                np.npy_intp spectrum1_size,
@@ -119,7 +130,11 @@ cdef double cosine_score_nogil(double spectrum1_mz,
     if matches.size() < min_matched_peaks:
         return 0.
 
-    return accumulate(matches.begin(), matches.end(), 0., &addScore)
+    try:
+        return accumulate(matches.begin(), matches.end(), 0., &addScore)
+    finally:
+        matches.clear()
+        matches.shrink_to_fit()
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
@@ -183,10 +198,16 @@ cdef (vector[float], vector[int], vector[int]) compute_similarity_matrix_sparse_
                                                    mzvec[j], datavec[j], data_sizes[j],
                                                    mz_tolerance, min_matched_peaks)
                 if score > 0:
+                    score = min(score, 1.)
                     openmp.omp_set_lock(&lock)
-                    data.push_back(min(score, 1))
+                    # upper triangle
+                    data.push_back(score)
                     col_ind.push_back(i)
                     row_ind.push_back(j)
+                    # lower triangle
+                    data.push_back(score)
+                    col_ind.push_back(j)
+                    row_ind.push_back(i)
                     openmp.omp_unset_lock(&lock)
             if has_callback:
                 with gil:
@@ -206,7 +227,7 @@ def cosine_score(double spectrum1_mz,
                               spectrum2_mz, <peak_t*>np_arr_pointer(spectrum2_data),
                               spectrum2_data.shape[0],
                               mz_tolerance, min_matched_peaks)
-                              
+      
 def compare_spectra(double spectrum1_mz,
                     np.ndarray[np.float32_t, ndim=2] spectrum1_data,
                     double spectrum2_mz,
@@ -243,8 +264,11 @@ def compute_similarity_matrix(vector[double] mzvec, list datavec,
         matrix[matrix>1] = 1
     else:
         data, col_ind, row_ind = compute_similarity_matrix_sparse_nogil(mzvec, data_p, data_sizes, mz_tolerance, min_matched_peaks, callback)
-        matrix = csr_matrix((data, (row_ind, col_ind)), dtype=np.float32)
-        matrix = matrix + matrix.T 
-        matrix.setdiag(1)
-        
+        matrix = csr_matrix((arr_from_1d_vector(data, np.dtype(np.float32)),
+                             (arr_from_1d_vector(col_ind, np.dtype(np.int32)),
+                             arr_from_1d_vector(row_ind, np.dtype(np.int32)))),
+                            dtype=np.float32)
+
+    data_sizes.clear()
+    data_sizes.shrink_to_fit()
     return matrix

@@ -188,6 +188,10 @@ def filter_data(double mz_parent, np.ndarray[np.float32_t, ndim=2] data,
         
     filtered = arr_from_peaks_vector(peaks)
     
+    # Free memory
+    peaks.clear()
+    peaks.shrink_to_fit()
+    
     return filtered
     
 def filter_data_multi(vector[double] mzvec, list datavec, int min_intensity,
@@ -219,5 +223,13 @@ def filter_data_multi(vector[double] mzvec, list datavec, int min_intensity,
             tmp_array = arr_from_peaks_vector(peaks)
             
         filtered.append(tmp_array)
+        
+    # Free memory
+    spectra.clear()
+    spectra.shrink_to_fit()
+    peaks.clear()
+    peaks.shrink_to_fit()
+    data_sizes.clear()
+    data_sizes.shrink_to_fit()
     
     return filtered

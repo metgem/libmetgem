@@ -29,7 +29,7 @@ def kneighbors_graph_from_similarity_matrix(matrix: csr_matrix, n_neighbors: int
     n_samples = matrix.shape[0]
     
     if n_neighbors > n_samples:
-        raise ValueError("Expected n_neighbors <= n_samples,  but n_samples = {n_samples}, n_neighbors = {n_neighbors}")
+        raise ValueError(f"Expected n_neighbors <= n_samples,  but n_samples = {n_samples}, n_neighbors = {n_neighbors}")
     elif n_neighbors == n_samples:
         return matrix
         

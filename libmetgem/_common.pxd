@@ -17,5 +17,5 @@ ctypedef packed struct score_t:
     
 cdef np.ndarray[np.float32_t, ndim=2] arr_from_peaks_vector(vector[peak_t] v)
 cdef np.ndarray arr_from_score_vector(vector[score_t] v)
+cdef np.ndarray arr_from_1d_vector(vector[numeric] v, np.dtype dtype)
 cdef void *np_arr_pointer(np.ndarray[numeric, ndim=2] data)
-cdef numeric *np_arr_pointer_1d(np.ndarray[numeric, ndim=1] data)

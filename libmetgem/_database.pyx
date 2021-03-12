@@ -329,6 +329,12 @@ cdef query_result_t query_nogil(char *fname, vector[int] indices,
     sqlite3_finalize(stmt)
     sqlite3_close(db)
     
+    # Free memory
+    filtered.clear()
+    filtered.shrink_to_fit()
+    ids.clear()
+    ids.shrink_to_fit()
+    
     if has_callback:
         with gil:
             callback(100)
@@ -372,6 +378,10 @@ def query(str filename, vector[int] indices, vector[double] mzvec, list datavec,
                      parent_filter_tolerance, matched_peaks_window,
                      min_matched_peaks_search, min_cosine,
                      analog_mz_tolerance, positive_polarity, callback)
+                     
+    # Free memory
+    data_sizes.clear()
+    data_sizes.shrink_to_fit()
                            
     if qr.res_code == SQLITE_OK:
         return qr.results

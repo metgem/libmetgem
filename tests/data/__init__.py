@@ -433,6 +433,7 @@ def sparse_matrix(request, random_spectra, compute_similarity_matrix_f):
                 scope='session')
 def neighbors_graph(request, sparse_matrix, kneighbors_graph_from_similarity_matrix_f):
     """Compute neighbors graph for different matrix and n_neighbors combinations."""
+        
     m = kneighbors_graph_from_similarity_matrix_f(sparse_matrix, n_neighbors=request.param)
     
     return request.param, m

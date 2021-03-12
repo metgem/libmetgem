@@ -94,6 +94,10 @@ cdef vector[interaction_t] generate_network_nogil(const float[:,:] scores_matrix
                 if not callback(100):
                     interactions.clear()
                     return interactions
+                    
+    # Free memory
+    row.clear()
+    row.shrink_to_fit()
                 
     size = interactions.size()
     if has_callback and size % 100 != 0:
@@ -143,6 +147,14 @@ cdef vector[interaction_t] generate_network_nogil(const float[:,:] scores_matrix
     if has_callback and size % 100 != 0:
         with gil:
             callback(size % 100)
+            
+    # Free memory
+    interactions.clear()
+    interactions.shrink_to_fit()
+    x_ind.clear()
+    x_ind.shrink_to_fit()
+    y_ind.clear()
+    y_ind.shrink_to_fit()
             
     return interactions2
     
