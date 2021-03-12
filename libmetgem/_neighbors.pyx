@@ -13,6 +13,8 @@ np.import_array()
     
 cdef extern from "argpartition.h" nogil:
    vector[T] argpartition[T](vector[float] vec, const int &N)
+   
+cdef NUMPY_TYPE_MAP = {2 : np.int16, 4: np.int32, 8: np.int64}
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
@@ -22,8 +24,8 @@ cdef _kneighbors_graph_from_similarity_matrix_nogil(
     cdef:
         integral n_nonzero = n_samples * (n_neighbors+1)
         np.float32_t[:] r_data = np.empty(n_nonzero, dtype=np.float32)
-        integral[:] r_indices = np.empty(n_nonzero, dtype=np.dtype(cython.typeof(indices[0])))
-        integral[:] r_indptr = np.arange(0, n_nonzero + 1, n_neighbors+1, dtype=np.dtype(cython.typeof(indptr[0])))
+        integral[:] r_indices = np.empty(n_nonzero, dtype=NUMPY_TYPE_MAP[sizeof(indices[0])])
+        integral[:] r_indptr = np.arange(0, n_nonzero + 1, n_neighbors+1, dtype=NUMPY_TYPE_MAP[sizeof(indices[0])])
         vector[np.float32_t] row
         vector[integral] ind
         vector[integral] inds
