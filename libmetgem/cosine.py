@@ -30,21 +30,14 @@ def _compare_spectra(spectrum1_mz: float, spectrum1_data: np.ndarray,
     dm = spectrum1_mz - spectrum2_mz
     
     scores = []
-    
-    if dm == 0.:
-        for i in range(spectrum1_data.shape[0]):
-            for j in range(spectrum2_data.shape[0]):
-                diff = spectrum2_data[j, MZ] - spectrum1_data[i, MZ]
-                if abs(diff) <= mz_tolerance:
-                    scores.append((spectrum1_data[i, INTENSITY] * spectrum2_data[j, INTENSITY], i, j, SpectraMatchState.fragment))
-    else:
-        for i in range(spectrum1_data.shape[0]):
-            for j in range(spectrum2_data.shape[0]):
-                diff = spectrum2_data[j, MZ] - spectrum1_data[i, MZ]
-                if abs(diff) <= mz_tolerance:
-                    scores.append((spectrum1_data[i, INTENSITY] * spectrum2_data[j, INTENSITY], i, j, SpectraMatchState.fragment))
-                elif abs(diff + dm) <= mz_tolerance:
-                    scores.append((spectrum1_data[i, INTENSITY] * spectrum2_data[j, INTENSITY], i, j, SpectraMatchState.neutral_loss))  
+
+    for i in range(spectrum1_data.shape[0]):
+        for j in range(spectrum2_data.shape[0]):
+            diff = spectrum2_data[j, MZ] - spectrum1_data[i, MZ]
+            if abs(diff) <= mz_tolerance:
+                scores.append((spectrum1_data[i, INTENSITY] * spectrum2_data[j, INTENSITY], i, j, SpectraMatchState.fragment))
+            elif abs(diff + dm) <= mz_tolerance:
+                scores.append((spectrum1_data[i, INTENSITY] * spectrum2_data[j, INTENSITY], i, j, SpectraMatchState.neutral_loss))
 
     if not scores:
         return (0., 0, scores)
