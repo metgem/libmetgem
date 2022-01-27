@@ -34,9 +34,16 @@ def _compare_spectra(spectrum1_mz: float, spectrum1_data: np.ndarray,
     for i in range(spectrum1_data.shape[0]):
         for j in range(spectrum2_data.shape[0]):
             diff = spectrum2_data[j, MZ] - spectrum1_data[i, MZ]
+            # Check if fragments match
             if abs(diff) <= mz_tolerance:
                 scores.append((spectrum1_data[i, INTENSITY] * spectrum2_data[j, INTENSITY], i, j, SpectraMatchState.fragment))
+            # Check if neutral losses match
             elif abs(diff + dm) <= mz_tolerance:
+                # Reordering the terms yields:
+                #   diff + dm
+                #   = spectrum2_data[j, MZ] - spectrum1_data[i, MZ] + spectrum1_mz - spectrum2_mz
+                #   = (spectrum1_mz - spectrum1_data[i, MZ]) + (spectrum2_data[j, MZ] - spectrum2_mz)
+                #   = neutral_loss_spectrum1 - neutral_loss_spectrum2
                 scores.append((spectrum1_data[i, INTENSITY] * spectrum2_data[j, INTENSITY], i, j, SpectraMatchState.neutral_loss))
 
     if not scores:
