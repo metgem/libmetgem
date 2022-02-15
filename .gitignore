@@ -187,5 +187,4 @@ ENV/
 build/
 *.mgf
 *.csv
-libmetgem/_version.py
 libmetgem/_cython.py
