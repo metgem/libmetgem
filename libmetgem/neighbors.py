@@ -33,24 +33,29 @@ def kneighbors_graph_from_similarity_matrix(matrix: csr_matrix, n_neighbors: int
     elif n_neighbors == n_samples:
         return matrix
         
-    n_nonzero = n_samples * (n_neighbors+1)
-    indptr = np.arange(0, n_nonzero + 1, n_neighbors+1)
-    
-    data = np.empty(n_nonzero, dtype=matrix.data.dtype)
-    indices = np.empty(n_nonzero, dtype=int)
-    row = np.ones(n_samples)
+    if n_neighbors > 0:
+        n_nonzero = n_samples * (n_neighbors+1)
+        indptr = np.arange(0, n_nonzero + 1, n_neighbors + 1)
+        data = np.empty(n_nonzero, dtype=matrix.data.dtype)
+        indices = np.empty(n_nonzero, dtype=int)
+        row = np.ones(n_samples)
 
-    for i in range(n_samples):
-        indptr_range = slice(matrix.indptr[i], matrix.indptr[i+1])
-        inds = matrix.indices[indptr_range]
-        row[inds] = 1 - matrix.data[indptr_range]
+        for i in range(n_samples):
+            indptr_range = slice(matrix.indptr[i], matrix.indptr[i+1])
+            inds = matrix.indices[indptr_range]
+            row[inds] = 1 - matrix.data[indptr_range]
 
-        ind = np.argpartition(row, n_neighbors)
-        ind = ind[:n_neighbors+1]
-            
-        indptr_range = slice(indptr[i], indptr[i+1])
-        data[indptr_range] = row[ind]
-        indices[indptr_range] = ind
-        row[inds] = 1
+            ind = np.argpartition(row, n_neighbors)
+            ind = ind[:n_neighbors+1]
+                
+            indptr_range = slice(indptr[i], indptr[i+1])
+            data[indptr_range] = row[ind]
+            indices[indptr_range] = ind
+            row[inds] = 1
+        return csr_matrix((data, indices, indptr))
+    else:
+        indptr = np.zeros(n_samples+1)
+        data = np.empty(0, dtype=matrix.data.dtype)
+        indices = np.empty(0, dtype=matrix.indices.dtype)
     
-    return csr_matrix((data, indices, indptr))
+    return csr_matrix((data, indices, indptr), shape=matrix.shape)

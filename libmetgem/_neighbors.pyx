@@ -62,6 +62,10 @@ def kneighbors_graph_from_similarity_matrix(matrix: csr_matrix, int n_neighbors)
         raise ValueError(f"Expected n_neighbors <= n_samples,  but n_samples = {n_samples}, n_neighbors = {n_neighbors}")
     elif n_neighbors == n_samples:
         return matrix
+    else:
+        indptr = np.zeros(n_samples+1)
+        data = np.empty(0, dtype=matrix.data.dtype)
+        indices = np.empty(0, dtype=matrix.indices.dtype)
 
     if matrix.indices.dtype == np.int64:
         return _kneighbors_graph_from_similarity_matrix_nogil[long](matrix.data,
