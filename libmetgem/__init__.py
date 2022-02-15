@@ -29,3 +29,6 @@ def human_readable_data(data: np.ndarray) -> np.ndarray:
     data[:, INTENSITY] = data[:, INTENSITY] ** 2
     data[:, INTENSITY] = data[:, INTENSITY] / data[:, INTENSITY].max() * 100
     return data
+
+from . import _version
+__version__ = _version.get_versions()['version']
