@@ -13,7 +13,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        python-version: [3.8, 3.9, 3.10]
+        python-version: [3.8, 3.9, '3.10']
         os: [ubuntu-latest, windows-latest, macos-latest]
         # exclude:  # Temporarily disable release for macos and python 3.8 as there is a bug with openblas
           # - os: macos-latest
