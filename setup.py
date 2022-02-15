@@ -5,6 +5,7 @@ from setuptools import setup, find_packages
 from setuptools.extension import Extension, _have_cython
 
 import numpy as np
+import versioneer
 
 HAS_CYTHON = _have_cython()
 if HAS_CYTHON:
@@ -20,75 +21,6 @@ SRC_PATH = "libmetgem"
 if "--skip-build" in sys.argv:
     HAS_CYTHON = False
     sys.argv.remove("--skip-build")
-
-    
-def git_version():
-    '''Return the git revision as a string'''
-    
-    def _minimal_ext_cmd(cmd):
-        # construct minimal environment
-        env = {}
-        for k in ['SYSTEMROOT', 'PATH', 'HOME']:
-            v = os.environ.get(k)
-            if v is not None:
-                env[k] = v
-        # LANGUAGE is used on win32
-        env['LANGUAGE'] = 'C'
-        env['LANG'] = 'C'
-        env['LC_ALL'] = 'C'
-        out = subprocess.Popen(cmd, stdout=subprocess.PIPE, env=env).communicate()[0]
-        return out
-
-    try:
-        out = _minimal_ext_cmd(['git', 'rev-parse', 'HEAD'])
-        GIT_REVISION = out.strip().decode('ascii')
-    except OSError:
-        GIT_REVISION = "Unknown"
-
-    return GIT_REVISION
-  
-
-def get_version_info():
-    # Adding the git rev number needs to be done inside write_version_py(),
-    # otherwise the import of numpy.version messes up the build under Python 3.
-    FULLVERSION = VERSION
-    if os.path.exists('.git'):
-        GIT_REVISION = git_version()
-    elif os.path.exists('libmetgem/version.py'):
-        # must be a source distribution, use existing version file
-        try:
-            from libmetgem.version import git_revision as GIT_REVISION
-        except ImportError:
-            raise ImportError("Unable to import git_revision. Try removing " \
-                              "libmetgem/version.py and the build directory " \
-                              "before building.")
-    else:
-        GIT_REVISION = "Unknown"
-
-    if not ISRELEASED:
-        FULLVERSION += '.dev0+' + GIT_REVISION[:7]
-
-    return FULLVERSION, GIT_REVISION
-    
-
-def write_version_py(filename='libmetgem/_version.py'):
-    cnt = ("# THIS FILE IS GENERATED FROM LIBMETGEM SETUP.PY\n\n"
-           "short_version = '%(version)s'\n"
-           "version = '%(version)s'\n"
-           "full_version = '%(full_version)s'\n"
-           "git_revision = '%(git_revision)s'\n"
-           "release = %(isrelease)s\n"
-           "if not release:\n"
-           "    version = full_version\n"
-           "IS_CYTHONIZED = %(cythonized)s\n")
-    FULLVERSION, GIT_REVISION = get_version_info()
-
-    with open(filename, 'w') as f:
-        f.write(cnt % {'version': VERSION,
-                       'full_version': FULLVERSION,
-                       'git_revision': GIT_REVISION,
-                       'isrelease': str(ISRELEASED),
-                       'cythonized': bool(HAS_CYTHON)})
 
 
 if sys.platform == "win32":
@@ -170,7 +102,10 @@ else:
     install_requires = ["numpy", "pyteomics", "scipy"]
     include_dirs = []
 
-write_version_py(os.path.join('libmetgem', '_version.py'))
+
+with open('libmetgem/_cython.py', 'w') as f:
+    f.write(f"# THIS FILE IS GENERATED FROM LIBMETGEM SETUP.PY\n\nIS_CYTHONIZED = {bool(HAS_CYTHON)}\n")
+
 with open('README.rst', 'r') as f:
     LONG_DESCRIPTION = f.read()
     
@@ -179,7 +114,8 @@ setup(
     author = "Nicolas Elie",
     author_email = "nicolas.elie@cnrs.fr",
     url = "https://github.com/metgem/libmetgem",
-    version = get_version_info()[0],
+    version = versioneer.get_version(),
+    cmdclass = versioneer.get_cmdclass(),
     description = "Library for Molecular Networking calculations",
     long_description = LONG_DESCRIPTION,
     keywords = ["chemistry", "molecular networking", "mass spectrometry"],

@@ -3,7 +3,9 @@
 """
 
 from .common import MZ, INTENSITY
-from ._version import *
+from . import _version
+__version__ = _version.get_versions()['version']
+from ._cython import IS_CYTHONIZED
 from .filter import square_root_and_normalize_data
 
 import numpy as np

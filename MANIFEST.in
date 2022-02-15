@@ -1,0 +1,2 @@
+include versioneer.py
+include libmetgem/_version.py
