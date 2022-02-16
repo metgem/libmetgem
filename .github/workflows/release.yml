@@ -10,7 +10,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        python-version: [3.8, 3.9, '3.10']
+        python-version: [3.8, 3.9]
         os: [ubuntu-latest, windows-latest, macos-latest]
         #exclude:  # Temporarily disable release for macos and python 3.9 as there is a bug with numpy
         # - os: macos-latest
@@ -25,6 +25,7 @@ jobs:
         auto-update-conda: true
         python-version: ${{ matrix.python-version }}
         channels: conda-forge
+        channel-priority: strict
     - name: Conda info
       shell: bash -l {0}
       run: |

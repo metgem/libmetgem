@@ -17,7 +17,7 @@ requirements:
     host:
         - python
         - cython
-        - numpy 1.16
+        - numpy>=1.19
         - scipy
     run:
         - python
