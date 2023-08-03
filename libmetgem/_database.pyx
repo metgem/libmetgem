@@ -31,10 +31,15 @@ ctypedef struct query_result_t:
     char err_msg[48]
     unordered_map[int, vector[db_result_t]] results
     
-IF WIN32:
-    DEF CHARSET = "mbcs"
-ELSE:
-    DEF CHARSET = "UTF-8"
+cdef extern from *:
+    '''
+    #ifdef WIN32
+        #define CHARSET "mbcs"
+    #else
+        #define CHARSET "UTF-8"
+    #endif
+    '''
+    extern const char* CHARSET
 
 cdef extern from 'sqlite3.h' nogil:
     ctypedef int sqlite3

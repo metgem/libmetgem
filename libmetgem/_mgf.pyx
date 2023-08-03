@@ -14,32 +14,37 @@ from libc.stdio cimport fopen, fclose, fgets, FILE
 
 from ._common cimport peak_t, arr_from_peaks_vector
 
-DEF MAX_KEY_SIZE = 64
-DEF MAX_VALUE_SIZE = 2048
-DEF MAX_LINE_SIZE = 2051 # 2048 characters + '\r\n' + '\0'
+cdef enum:
+    MAX_KEY_SIZE = 64
+    MAX_VALUE_SIZE = 2048
+    MAX_LINE_SIZE = 2051 # 2048 characters + '\r\n' + '\0'
 
 cdef extern from "<string.h>" nogil:
     char *strchr (char *string, int c)
+    
+    
+# Implement strlwr as it is only available on windows
+cdef extern from "<ctype.h>" nogil:
+    int tolower(int c)
 
-IF WIN32:
-    DEF CHARSET = "mbcs"
+cdef char* strlwr(char* string) nogil:
+    cdef int i=0
 
-    cdef extern from "<string.h>" nogil:
-        char *strlwr (char *string)
-ELSE:
-    DEF CHARSET = "UTF-8"
+    while string[i] != b'\0':
+        string[i] = tolower(string[i])
+        i += 1
 
-    cdef extern from "<ctype.h>" nogil:
-        int tolower(int c)
+    return string
 
-    cdef char* strlwr(char* string) nogil:
-        cdef int i=0
-
-        while string[i] != b'\0':
-            string[i] = tolower(string[i])
-            i += 1
-
-        return string
+cdef extern from *:
+    '''
+    #ifdef WIN32
+        #define CHARSET "mbcs"
+    #else
+        #define CHARSET "UTF-8"
+    #endif
+    '''
+    extern const char* CHARSET
     
     
 cdef inline double strtof(char* string, char **endptr) nogil:
