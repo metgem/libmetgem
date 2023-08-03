@@ -1,0 +1,45 @@
+[build-system]
+requires = ["setuptools", "setuptools-scm", "numpy", "versioneer[toml]", "cython"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "libmetgem"
+authors = [
+    {name = "Nicolas Elie", email = "nicolas.elie@cnrs.fr"},
+]
+description = "Library for Molecular Networking calculations"
+readme = "README.rst"
+requires-python = ">=3.6"
+keywords = ["chemistry", "molecular networking", "mass spectrometry"]
+license = {text = "GPLv3+"}
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
+    "Operating System :: OS Independent",
+    "Topic :: Scientific/Engineering :: Bio-Informatics",
+    "Topic :: Scientific/Engineering :: Chemistry",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Programming Language :: Cython",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.6",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+]
+dynamic=["version", "dependencies"]
+
+[project.urls]
+Homepage = "https://github.com/metgem/libmetgem"
+Documentation = "https://libmetgem.readthedocs.io"
+Repository  = "https://github.com/metgem/libmetgem"
+
+[tool.versioneer]
+VCS = "git"
+style = "pep440"
+versionfile_source = "libmetgem/_version.py"
+versionfile_build = "libmetgem/_version.py"
+tag_prefix = "v"
+parentdir_prefix = ""

@@ -11,6 +11,8 @@ on:
 jobs:
   build:
     runs-on: ${{ matrix.os }}
+    env:
+      CYTHON_LINETRACE: true
     strategy:
       matrix:
         python-version: [3.8, 3.9]
@@ -47,8 +49,7 @@ jobs:
     - name: Build
       shell: bash -l {0}
       run: |
-        python setup.py build_ext --inplace --with-cython-coverage
-        python setup.py develop
+        python -m pip install . -vv
     - name: Install test dependencies
       shell: bash -l {0}
       run: |

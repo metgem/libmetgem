@@ -13,10 +13,9 @@ if HAS_CYTHON:
 
 SRC_PATH = "libmetgem"
 
-if "--skip-build" in sys.argv:
+skip_build = os.environ.get('CYTHON_SKIP_BUILD', default=False)
+if skip_build:
     HAS_CYTHON = False
-    sys.argv.remove("--skip-build")
-
 
 if sys.platform == "win32":
     OPENMP_FLAGS = "/openmp"
@@ -25,18 +24,11 @@ elif sys.platform == "darwin":
 else:
     OPENMP_FLAGS = "-fopenmp"
     
-# enable coverage by building cython file by running build_ext with
-# `--with-cython-coverage` enabled
-linetrace = False
-if '--with-cython-coverage' in sys.argv:
-    linetrace = True
-    sys.argv.remove('--with-cython-coverage')
+# enable coverage by building with linetrace activated
+linetrace = os.environ.get('CYTHON_LINETRACE', default=False)
 
-directives = {'embedsignature': True, 'linetrace': False}
-macros = []
-if linetrace:
-    directives['linetrace'] = True
-    macros = [('CYTHON_TRACE', '1'), ('CYTHON_TRACE_NOGIL', '1')]
+directives = {'embedsignature': True, 'linetrace': linetrace}
+macros = [('CYTHON_TRACE', '1'), ('CYTHON_TRACE_NOGIL', '1')] if linetrace else []
      
 if HAS_CYTHON:
     ext_modules = [
@@ -85,14 +77,13 @@ if HAS_CYTHON:
         e.define_macros.extend(macros)
         
     ext_modules = cythonize(ext_modules,
-                            compile_time_env={'WIN32': sys.platform == 'win32'},
                             compiler_directives=directives)
         
     install_requires = ["numpy", "scipy"]
     include_dirs = [np.get_include()]
 else:
     ext_modules = []
-    install_requires = ["numpy", "pyteomics", "scipy", "versioneer"]
+    install_requires = ["numpy", "pyteomics", "scipy"]
     include_dirs = []
 
 
