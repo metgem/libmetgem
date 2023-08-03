@@ -15,39 +15,46 @@ from libc.stdio cimport fopen, fclose, fgets, FILE
 
 from ._common cimport peak_t, arr_from_peaks_vector
 
-DEF MAX_KEY_SIZE = 64
-DEF MAX_VALUE_SIZE = 2048
-DEF MAX_LINE_SIZE = 2051 # 2048 characters + '\r\n' + '\0'
+cdef enum:
+    MAX_KEY_SIZE = 64
+    MAX_VALUE_SIZE = 2048
+    MAX_LINE_SIZE = 2051 # 2048 characters + '\r\n' + '\0'
 
 cdef extern from "<string.h>" nogil:
+    '''
+    #ifdef _WIN32
+        #define strncasecmp(s1, s2, n)  _strnicmp(s1, s2, n)
+    #endif
+    '''
+    int strncasecmp (const char *s1, const char *s2, size_t n)
     char *strchr (char *string, int c)
     
 cdef extern from "<ctype.h>" nogil:
-    int isspace( int character )
+    int isspace(int character)
 
-IF WIN32:
-    DEF CHARSET = "mbcs"
-
-    cdef extern from "<string.h>" nogil:
-        char *strlwr (char *string)
-        int strncasecmp "_strnicmp" (const char *string1, const char *string2, size_t count)
     
-ELSE:
-    DEF CHARSET = "UTF-8"
+# Implement strlwr as it is only available on windows
+cdef extern from "<ctype.h>" nogil:
+    int tolower(int c)
 
-    cdef extern from "<ctype.h>" nogil:
-        int tolower(int c)
+cdef char* strlwr(char* string) nogil:
+    cdef int i=0
 
-    cdef inline char* strlwr(char* string) nogil:
-        cdef int i=0
+    while string[i] != b'\0':
+        string[i] = tolower(string[i])
+        i += 1
 
-        while string[i] != b'\0':
-            string[i] = tolower(string[i])
-            i += 1
-            
-        return string
-        
-    from libc.string cimport strncasecmp
+    return string
+
+cdef extern from *:
+    '''
+    #ifdef _WIN32
+        #define CHARSET "mbcs"
+    #else
+        #define CHARSET "UTF-8"
+    #endif
+    '''
+    extern const char* CHARSET
     
     
 cdef inline bool isdelim(char s) nogil:

@@ -21,8 +21,7 @@ cdef enum:
 
 cdef extern from "<string.h>" nogil:
     char *strchr (char *string, int c)
-    
-    
+       
 # Implement strlwr as it is only available on windows
 cdef extern from "<ctype.h>" nogil:
     int tolower(int c)
@@ -38,7 +37,7 @@ cdef char* strlwr(char* string) nogil:
 
 cdef extern from *:
     '''
-    #ifdef WIN32
+    #ifdef _WIN32
         #define CHARSET "mbcs"
     #else
         #define CHARSET "UTF-8"

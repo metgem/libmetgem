@@ -33,7 +33,7 @@ ctypedef struct query_result_t:
     
 cdef extern from *:
     '''
-    #ifdef WIN32
+    #ifdef _WIN32
         #define CHARSET "mbcs"
     #else
         #define CHARSET "UTF-8"
