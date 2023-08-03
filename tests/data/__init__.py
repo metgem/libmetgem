@@ -29,6 +29,7 @@ MATCHED_PEAKS_WINDOWS = (0, 50, 100)
 MIN_MATCHED_PEAKS_SEARCHS = (0, 6, 12)
 PAIRS_MIN_COSINES = (0, 0.3, 0.7)
 TOP_KS = (0, 1, 10)
+MZ_MINS = (20, 50, 100.)
 
 MZS = (723.3371, 885.3909, 643.2885, 643.289, 487.2665, 545.2717)
 SPECTRA = {}
@@ -221,6 +222,15 @@ def pairs_min_cosine(request):
 @pytest.fixture(params=TOP_KS, scope="session")
 def top_k(request):
     """Provides some values for `generate_network`' `top_k`
+       parameter.
+    """
+    
+    return request.param
+    
+    
+@pytest.fixture(params=MZ_MINS, scope="session")
+def mz_min(request):
+    """Provides some values for `filter_data`' `mz_min`
        parameter.
     """
     

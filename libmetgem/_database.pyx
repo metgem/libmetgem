@@ -170,6 +170,7 @@ cdef query_result_t query_nogil(char *fname, vector[int] indices,
                                 int min_matched_peaks_search, double min_cosine,
                                 double analog_mz_tolerance=0.,
                                 bool positive_polarity=True,
+                                double mz_min = 50.,
                                 object callback=None) nogil:
     cdef:
         sqlite3 *db
@@ -184,7 +185,7 @@ cdef query_result_t query_nogil(char *fname, vector[int] indices,
         int i
         unsigned int j
         int ret
-        double mz_min = mzvec[0], mz_max = mzvec[0]
+        double mz_low = mzvec[0], mz_high = mzvec[0]
         bool has_callback = callback is not None
         db_result_t r
         query_result_t qr
@@ -212,10 +213,10 @@ cdef query_result_t query_nogil(char *fname, vector[int] indices,
     
     # Get min/max mz values in list
     for i in range(size):
-        if mzvec[i] < mz_min:
-            mz_min = mzvec[i]
-        elif mzvec[i] > mz_max:
-            mz_max = mzvec[i]
+        if mzvec[i] < mz_low:
+            mz_low = mzvec[i]
+        elif mzvec[i] > mz_high:
+            mz_high = mzvec[i]
                
     # Prepare SQL query
     num_dbs = <int> databases.size()
@@ -237,11 +238,11 @@ cdef query_result_t query_nogil(char *fname, vector[int] indices,
 
     sqlite3_bind_int(stmt, num_dbs+1, positive_polarity)
     if analog_mz_tolerance > 0:
-        sqlite3_bind_double(stmt, num_dbs+2, mz_min-analog_mz_tolerance)
-        sqlite3_bind_double(stmt, num_dbs+3, mz_max+analog_mz_tolerance)
+        sqlite3_bind_double(stmt, num_dbs+2, mz_low-analog_mz_tolerance)
+        sqlite3_bind_double(stmt, num_dbs+3, mz_high+analog_mz_tolerance)
     else:
-        sqlite3_bind_double(stmt, num_dbs+2, mz_min-mz_tolerance)
-        sqlite3_bind_double(stmt, num_dbs+3, mz_max+mz_tolerance)
+        sqlite3_bind_double(stmt, num_dbs+2, mz_low-mz_tolerance)
+        sqlite3_bind_double(stmt, num_dbs+3, mz_high+mz_tolerance)
 
     if ret != SQLITE_OK:
         strcpy(qr.err_msg, sqlite3_errmsg(db))
@@ -303,7 +304,8 @@ cdef query_result_t query_nogil(char *fname, vector[int] indices,
                 if blob_size > 0:
                     filtered = filter_data_nogil(pepmass, blob, blob_size,
                                              min_intensity, parent_filter_tolerance,
-                                             matched_peaks_window, min_matched_peaks_search)
+                                             matched_peaks_window, min_matched_peaks_search,
+                                             mz_min)
                     for i in ids:
                         score = cosine_score_nogil(pepmass, filtered.data(), filtered.size(),
                                                    mzvec[i], datavec[i], data_sizes[i],
@@ -355,7 +357,7 @@ def query(str filename, vector[int] indices, vector[double] mzvec, list datavec,
           int min_intensity, int parent_filter_tolerance,
           int matched_peaks_window, int min_matched_peaks_search,
           double min_cosine, double analog_mz_tolerance=0.,
-          bool positive_polarity=True, object callback=None):
+          double mz_min = 50., bool positive_polarity=True, object callback=None):
     cdef:
         bytes fname_bytes
         char *fname
@@ -382,7 +384,8 @@ def query(str filename, vector[int] indices, vector[double] mzvec, list datavec,
                      mz_tolerance, min_matched_peaks, min_intensity,
                      parent_filter_tolerance, matched_peaks_window,
                      min_matched_peaks_search, min_cosine,
-                     analog_mz_tolerance, positive_polarity, callback)
+                     analog_mz_tolerance, positive_polarity,
+                     mz_min, callback)
                      
     # Free memory
     data_sizes.clear()

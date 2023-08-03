@@ -13,9 +13,9 @@ __all__ = ('filter_data', 'filter_data_multi')
 
 
 def parent_filter(mz_parent: float, data: np.ndarray, min_intensity: int,
-                parent_filter_tolerance: int) -> np.ndarray:
+                parent_filter_tolerance: int, mz_min: float = 50.) -> np.ndarray:
     # Filter low mass peaks
-    data = data[data[:, MZ] >= 50]
+    data = data[data[:, MZ] >= mz_min]
 
     # Filter peaks close to the parent ion's m/z
     data = data[np.logical_or(data[:, MZ] <= mz_parent - parent_filter_tolerance,
@@ -78,10 +78,11 @@ def square_root_and_normalize_data(data: np.ndarray, copy: bool=True) -> np.ndar
 @load_cython
 def filter_data(mz_parent: float, data: np.ndarray, min_intensity: int,
                 parent_filter_tolerance: int, matched_peaks_window: float,
-                min_matched_peaks_search: float) -> np.ndarray:
+                min_matched_peaks_search: float,
+                mz_min: float = 50.) -> np.ndarray:
     """
         6-step filter of an array representing an MS/MS spectrum:
-            * Low mass filtering: Remove all peaks with *m/z* lower than 50.
+            * Low mass filtering: Remove all peaks with *m/z* lower than `mz_min`.
             * Parent filtering: Remove peaks with *m/z* in the closed interval
               `mz_parent` +/- `parent_filter_tolerance`.
             * Threshold filtering: Keep only peaks with an intensity higher than
@@ -105,6 +106,7 @@ def filter_data(mz_parent: float, data: np.ndarray, min_intensity: int,
             `window rank filtering` step.
         min_matched_peaks_search: Control how many peaks to keep at each step
             during the `window rank filtering` step.
+        mz_min: All peaks with *m/z* below this value will be filtered out.
     
     Returns:
         A filtered array.
@@ -114,8 +116,8 @@ def filter_data(mz_parent: float, data: np.ndarray, min_intensity: int,
     if data.size == 0:
         return data
 
-    if min_intensity > 0 or parent_filter_tolerance > 0 or min(data[:,MZ]) < 50:
-        data = parent_filter(mz_parent, data, min_intensity, parent_filter_tolerance)
+    if min_intensity > 0 or parent_filter_tolerance > 0 or min(data[:,MZ]) < mz_min:
+        data = parent_filter(mz_parent, data, min_intensity, parent_filter_tolerance, mz_min)
         
     if matched_peaks_window > 0 and min_matched_peaks_search > 0:
         data = window_rank_filter(data, matched_peaks_window, min_matched_peaks_search)
@@ -130,6 +132,7 @@ def filter_data_multi(mzvec: List[float], datavec: List[np.ndarray],
                       min_intensity: int, parent_filter_tolerance: int,
                       matched_peaks_window: float,
                       min_matched_peaks_search: float,
+                      mz_min: float = 50.,
                       callback: Callable[[int], bool]=None) -> List[np.ndarray]:
                       
     """
@@ -145,6 +148,7 @@ def filter_data_multi(mzvec: List[float], datavec: List[np.ndarray],
             `window rank filtering` step.
         min_matched_peaks_search: Control how many peaks to keep at each step
             during the `window rank filtering` step.
+        mz_min: All peaks with *m/z* below this value will be filtered out.
         callback: function called to track progress of computation. First
             parameter (`int`) is the number of spectra computed since last call.
             It should return True if processing should continue, or False if
@@ -164,7 +168,7 @@ def filter_data_multi(mzvec: List[float], datavec: List[np.ndarray],
 
     for i in range(size):
         result.append(filter_data(mzvec[i], datavec[i], min_intensity, parent_filter_tolerance,
-                                  matched_peaks_window, min_matched_peaks_search))
+                                  matched_peaks_window, min_matched_peaks_search, mz_min))
         if has_callback and i % 10 == 0:
             callback(10)
 

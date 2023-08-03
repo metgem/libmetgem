@@ -11,20 +11,22 @@ from funcs import filter_data_multi_f
 
 from data import (random_spectra, known_spectra_filter_comparison,
                   min_intensity, parent_filter_tolerance,
-                  matched_peaks_window, min_matched_peaks_search)
+                  matched_peaks_window, min_matched_peaks_search,
+                  mz_min)
 
                   
 def test_filter_data_multi_known(known_spectra_filter_comparison,
                 min_intensity, parent_filter_tolerance,
                 matched_peaks_window, min_matched_peaks_search,
-                filter_data_multi_f):
+                mz_min, filter_data_multi_f):
     mzs, unfiltered_spectra, spectra = known_spectra_filter_comparison
     
     filtered_spectra = filter_data_multi_f(mzs, unfiltered_spectra,
                                          min_intensity,
                                          parent_filter_tolerance,
                                          matched_peaks_window,
-                                         min_matched_peaks_search)
+                                         min_matched_peaks_search,
+                                         mz_min)
     
     for data in filtered_spectra:
         assert np.sort(data, axis=0) == pytest.approx(np.sort(data, axis=0))
@@ -61,7 +63,7 @@ def test_filter_data_multi_callback_count(random_spectra, mocker, filter_data_mu
     callback = mocker.Mock(return_value=True)
     
     mzs, spectra = random_spectra
-    matrix = filter_data_multi_f(mzs, spectra, 0, 0.02, 50, 6, callback)
+    matrix = filter_data_multi_f(mzs, spectra, 0, 0.02, 50, 6, 50, callback)
     
     expected_num_calls = len(mzs) % 10 + int(len(mzs) % 10 == 0)
     assert callback.call_count == expected_num_calls
@@ -72,6 +74,6 @@ def test_filter_data_multi_callback_abort(random_spectra, mocker, filter_data_mu
     callback = mocker.Mock(return_value=False)
        
     mzs, spectra = random_spectra
-    matrix = filter_data_multi_f(mzs, spectra, 0, 0.02, 50, 6, callback)
+    matrix = filter_data_multi_f(mzs, spectra, 0, 0.02, 50, 6, 50, callback)
     
     assert callback.call_count < len(mzs)

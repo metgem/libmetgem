@@ -11,7 +11,8 @@ from libmetgem.filter import filter_data
 
 from data import (random_spectrum, known_spectrum_filter_comparison,
                   min_intensity, parent_filter_tolerance,
-                  matched_peaks_window, min_matched_peaks_search)
+                  matched_peaks_window, min_matched_peaks_search,
+                  mz_min)
 
 
 def test_filter_data_known(known_spectrum_filter_comparison):
@@ -21,14 +22,14 @@ def test_filter_data_known(known_spectrum_filter_comparison):
     parent, data, expected = known_spectrum_filter_comparison
      
     expected = np.sort(expected, axis=0)
-    filtered = np.sort(filter_data(parent, data, 0, 17, 50, 6), axis=0)
+    filtered = np.sort(filter_data(parent, data, 0, 17, 50, 6, 50), axis=0)
        
     assert filtered == pytest.approx(expected)
     
     
 def test_filter_data_already_filtered(random_spectrum, min_intensity,
                   parent_filter_tolerance, matched_peaks_window,
-                  min_matched_peaks_search):
+                  min_matched_peaks_search, mz_min):
     """If filtering an already filtered array with the same parameters,
        *m/z* values should not change.
     """
@@ -36,19 +37,19 @@ def test_filter_data_already_filtered(random_spectrum, min_intensity,
     parent, data = random_spectrum
     data = filter_data(parent, data, min_intensity,
                   parent_filter_tolerance, matched_peaks_window,
-                  min_matched_peaks_search)
+                  min_matched_peaks_search, mz_min)
     
     expected = np.sort(data, axis=0)
     filtered = np.sort(filter_data(parent, data, min_intensity,
                   parent_filter_tolerance, matched_peaks_window,
-                  min_matched_peaks_search), axis=0)
+                  min_matched_peaks_search, mz_min), axis=0)
     
     assert filtered[:, MZ] == pytest.approx(expected[:, MZ])
     
     
 def test_filter_data_norm(random_spectrum, min_intensity,
                   parent_filter_tolerance, matched_peaks_window,
-                  min_matched_peaks_search):
+                  min_matched_peaks_search, mz_min):
     """Norm of filtered data should always be 1"""
     
     parent, data = random_spectrum
@@ -58,7 +59,7 @@ def test_filter_data_norm(random_spectrum, min_intensity,
     
     filtered = np.sort(filter_data(parent, data, min_intensity,
                   parent_filter_tolerance, matched_peaks_window,
-                  min_matched_peaks_search), axis=0)
+                  min_matched_peaks_search, mz_min), axis=0)
     
     if filtered.size > 0:
         assert pytest.approx(filtered[:, INTENSITY] @ filtered[:, INTENSITY]) == 1.
@@ -70,26 +71,44 @@ def test_filter_data_no_filtering(random_spectrum):
     
     parent, data = random_spectrum
     expected = np.sort(data, axis=0)
-    filtered = np.sort(filter_data(parent, data, 0, 0, 0, 0), axis=0)
+    filtered = np.sort(filter_data(parent, data, 0, 0, 0, 0, 0), axis=0)
     
     assert filtered.shape == expected.shape
     assert filtered[:, MZ] == pytest.approx(expected[:, MZ], rel=1e-4)
     
-    
+
 def test_filter_data_low_mass(random_spectrum, min_intensity,
                   parent_filter_tolerance, matched_peaks_window,
-                  min_matched_peaks_search):
+                  min_matched_peaks_search, mz_min):
     """Low mass peaks should be filtered out"""
+    
+    parent, data = random_spectrum
+    
+    # Make sure we have *m/z* below `mz_min`
+    data = data.copy()
+    data[0, MZ] = np.random.random() * mz_min
+    
+    filtered = np.sort(filter_data(parent, data, min_intensity,
+                  parent_filter_tolerance, matched_peaks_window,
+                  min_matched_peaks_search, mz_min), axis=0)
+    
+    assert filtered.shape < data.shape
+    if filtered.size > 0:
+        assert filtered[:, MZ].min() > mz_min
+        for mz in filtered[:, MZ]:
+            assert mz > mz_min
+            
+            
+def test_filter_data_low_mass_default_value(random_spectrum):
+    """If not specified, low mass peaks cut off has to be 50"""
     
     parent, data = random_spectrum
     
     # Make sure we have *m/z* below 50
     data = data.copy()
-    data[0, MZ] = np.random.random((1,)) * 50
+    data[0, MZ] = np.random.random() * 50
     
-    filtered = np.sort(filter_data(parent, data, min_intensity,
-                  parent_filter_tolerance, matched_peaks_window,
-                  min_matched_peaks_search), axis=0)
+    filtered = np.sort(filter_data(parent, data, 0, 17, 50, 6), axis=0)
     
     assert filtered.shape < data.shape
     if filtered.size > 0:
@@ -106,13 +125,13 @@ def test_filter_data_parent(random_spectrum, parent_filter_tolerance):
     
     # Make sure we have *m/z* in the parent+/-parent_filter_tolerance range
     data = data.copy()
-    data[0, MZ] = parent + np.random.random((1,)) * parent_filter_tolerance
+    data[0, MZ] = parent + np.random.random() * parent_filter_tolerance
     # Make sure that excluding range is strict
     data[1, MZ] = parent + parent_filter_tolerance
     data[2, MZ] = parent - parent_filter_tolerance
     
     filtered = np.sort(filter_data(parent, data, 0, parent_filter_tolerance,
-                                   50, 6), axis=0)
+                                   50, 6, 50), axis=0)
                                    
     if parent_filter_tolerance == 0:
         assert filtered.shape == data.shape
@@ -135,7 +154,7 @@ def test_filter_data_min_intensity(random_spectrum, min_intensity):
     parent, data = random_spectrum
     
     filtered = np.sort(filter_data(parent, data, min_intensity, 0,
-                                   0, 0), axis=0)
+                                   0, 0, 50), axis=0)
     
     if min_intensity == 0:
         assert filtered.shape == data.shape
@@ -173,7 +192,7 @@ def test_filter_data_window(random_spectrum, matched_peaks_window,
             
 def test_filter_data_non_contiguous(random_spectrum, min_intensity,
                   parent_filter_tolerance, matched_peaks_window,
-                  min_matched_peaks_search):
+                  min_matched_peaks_search, mz_min):
     """f-contiguous arrays should give same results than c-contiguous arrays.
     """
     
@@ -181,18 +200,18 @@ def test_filter_data_non_contiguous(random_spectrum, min_intensity,
     
     filtered = np.sort(filter_data(parent, data, min_intensity,
                   parent_filter_tolerance, matched_peaks_window,
-                  min_matched_peaks_search), axis=0)
+                  min_matched_peaks_search, mz_min), axis=0)
     data = np.asfortranarray(data, dtype=data.dtype)
     filtered_nc = np.sort(filter_data(parent, data, min_intensity,
                   parent_filter_tolerance, matched_peaks_window,
-                  min_matched_peaks_search), axis=0)
+                  min_matched_peaks_search, mz_min), axis=0)
     
     assert filtered == pytest.approx(filtered_nc)
     
     
 def test_filter_data_reversed(random_spectrum, min_intensity,
                   parent_filter_tolerance, matched_peaks_window,
-                  min_matched_peaks_search):
+                  min_matched_peaks_search, mz_min):
     """Reversed arrays should give same results than non-reversed arrays.
     """
     
@@ -200,30 +219,31 @@ def test_filter_data_reversed(random_spectrum, min_intensity,
     
     filtered = np.sort(filter_data(parent, data, min_intensity,
                   parent_filter_tolerance, matched_peaks_window,
-                  min_matched_peaks_search), axis=0)
+                  min_matched_peaks_search, mz_min), axis=0)
     filtered_r = np.sort(filter_data(parent, data[::-1], min_intensity,
                   parent_filter_tolerance, matched_peaks_window,
-                  min_matched_peaks_search), axis=0)
+                  min_matched_peaks_search, mz_min), axis=0)
     
     assert filtered == pytest.approx(filtered_r)
     
     
 def test_filter_data_empty(min_intensity, parent_filter_tolerance,
-                           matched_peaks_window, min_matched_peaks_search):
+                           matched_peaks_window, min_matched_peaks_search,
+                           mz_min):
     
     parent = 152.569
     data = np.empty((0, 2), dtype=np.float32)
     
     filtered = filter_data(parent, data, min_intensity,
                   parent_filter_tolerance, matched_peaks_window,
-                  min_matched_peaks_search)
+                  min_matched_peaks_search, mz_min)
     assert filtered.size == 0
 
 @pytest.mark.python            
 @pytest.mark.skipif(not IS_CYTHONIZED, reason="libmetgem should be cythonized")
 def test_filter_data_python_cython(random_spectrum, min_intensity,
                   parent_filter_tolerance, matched_peaks_window,
-                  min_matched_peaks_search):
+                  min_matched_peaks_search, mz_min):
     """Cythonized `filter_data` and it's fallback Python version should give the
        same results.
     """
@@ -232,10 +252,10 @@ def test_filter_data_python_cython(random_spectrum, min_intensity,
     
     filtered_p = np.sort(filter_data.__wrapped__(parent, data, min_intensity,
                   parent_filter_tolerance, matched_peaks_window,
-                  min_matched_peaks_search), axis=0)
+                  min_matched_peaks_search, mz_min), axis=0)
     filtered_c = np.sort(filter_data(parent, data, min_intensity,
                   parent_filter_tolerance, matched_peaks_window,
-                  min_matched_peaks_search), axis=0)
+                  min_matched_peaks_search, mz_min), axis=0)
     
     assert filtered_p.shape == filtered_c.shape
     assert filtered_p == pytest.approx(filtered_c)

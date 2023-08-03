@@ -61,7 +61,7 @@ def test_query_random_spectra(db, query_f):
     p, (mzs, spectra) = db
     
     for i, (mz, data) in enumerate(zip(mzs, spectra)):
-        filtered = filter_data(mz, data, 0, 17, 50, 6)
+        filtered = filter_data(mz, data, 0, 17, 50, 6, 50)
         results = query_f(str(p), [i], [mz], [filtered], [],
                           0.02, 0, 0, 17, 50, 6, 0.)
         assert i in results

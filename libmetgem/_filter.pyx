@@ -27,7 +27,8 @@ cdef bool compareByMz(const peak_t &a, const peak_t &b) nogil:
 @cython.cdivision(True)
 cdef vector[peak_t] parent_filter_nogil(double mz_parent, vector[peak_t] data,
                                         int min_intensity,
-                                        int parent_filter_tolerance) nogil:
+                                        int parent_filter_tolerance,
+                                        double mz_min = 50.) nogil:
     cdef:
         int i
         float mz, intensity
@@ -36,13 +37,13 @@ cdef vector[peak_t] parent_filter_nogil(double mz_parent, vector[peak_t] data,
         peak_t peak
         size_t size
             
-    # Filter out peaks with mz below 50 Da or with mz in `mz_parent` +- `parent_filter_tolerance` or with intensity < `min_intensity` % of maximum intensity
+    # Filter out peaks with mz below `mz_min` Da or with mz in `mz_parent` +- `parent_filter_tolerance` or with intensity < `min_intensity` % of maximum intensity
     # Maximum intensity is calculated from peaks not filtered out by mz filters
     size = data.size()
     result.reserve(size)
     for i in range(size):
         mz = data[i].mz
-        if 50 <= mz <= mz_parent - parent_filter_tolerance or mz >= mz_parent + parent_filter_tolerance:  # mz filter
+        if mz_min <= mz <= mz_parent - parent_filter_tolerance or mz >= mz_parent + parent_filter_tolerance:  # mz filter
             intensity = data[i].intensity
             
             if abs_min_intensity < 0:
@@ -121,7 +122,8 @@ cdef vector[peak_t] filter_data_nogil(double mz_parent, const peak_t *data,
                                       np.npy_intp data_size, int min_intensity,
                                       int parent_filter_tolerance,
                                       int matched_peaks_window,
-                                      int min_matched_peaks_search) nogil:
+                                      int min_matched_peaks_search,
+                                      double mz_min) nogil:
     cdef vector[peak_t] peaks
 
     if data_size == 0:
@@ -132,8 +134,8 @@ cdef vector[peak_t] filter_data_nogil(double mz_parent, const peak_t *data,
     # Sort data array by decreasing intensities
     sort(peaks.begin(), peaks.end(), &compareByIntensity)
     
-    if min_intensity > 0 or parent_filter_tolerance > 0 or (<peak_t> (min_element(peaks.begin(), peaks.end(), &compareByMz)[0])).mz < 50:
-        peaks = parent_filter_nogil(mz_parent, peaks, min_intensity, parent_filter_tolerance)
+    if min_intensity > 0 or parent_filter_tolerance > 0 or (<peak_t> (min_element(peaks.begin(), peaks.end(), &compareByMz)[0])).mz < mz_min:
+        peaks = parent_filter_nogil(mz_parent, peaks, min_intensity, parent_filter_tolerance, mz_min)
         
     if matched_peaks_window > 0 and min_matched_peaks_search > 0:
         peaks = window_rank_filter_nogil(peaks, matched_peaks_window, min_matched_peaks_search)
@@ -153,6 +155,7 @@ cdef vector[vector[peak_t]] filter_data_multi_nogil(vector[double] mzvec,
                                                     int parent_filter_tolerance,
                                                     int matched_peaks_window,
                                                     int min_matched_peaks_search,
+                                                    double mz_min,
                                                     object callback=None) nogil:
     cdef:
         vector[vector[peak_t]] spectra
@@ -166,7 +169,7 @@ cdef vector[vector[peak_t]] filter_data_multi_nogil(vector[double] mzvec,
     for i in prange(<int>size, schedule='guided'):
         data_size = data_sizes[i]
         data_p = datavec[i]
-        spectra[i] = filter_data_nogil(mzvec[i], data_p, data_size, min_intensity, parent_filter_tolerance, matched_peaks_window, min_matched_peaks_search)
+        spectra[i] = filter_data_nogil(mzvec[i], data_p, data_size, min_intensity, parent_filter_tolerance, matched_peaks_window, min_matched_peaks_search, mz_min)
         if has_callback and i % 100 == 0:
             with gil:
                 callback(100)
@@ -179,9 +182,10 @@ cdef vector[vector[peak_t]] filter_data_multi_nogil(vector[double] mzvec,
       
 def filter_data(double mz_parent, np.ndarray[np.float32_t, ndim=2] data,
                 int min_intensity, int parent_filter_tolerance,
-                int matched_peaks_window, int min_matched_peaks_search):
+                int matched_peaks_window, int min_matched_peaks_search,
+                double mz_min = 50.):
     cdef np.ndarray[np.float32_t, ndim=2] filtered
-    cdef vector[peak_t] peaks = filter_data_nogil(mz_parent, <peak_t*>np_arr_pointer(data), data.shape[0], min_intensity, parent_filter_tolerance, matched_peaks_window, min_matched_peaks_search)
+    cdef vector[peak_t] peaks = filter_data_nogil(mz_parent, <peak_t*>np_arr_pointer(data), data.shape[0], min_intensity, parent_filter_tolerance, matched_peaks_window, min_matched_peaks_search, mz_min)
     
     if peaks.size() == 0:
         return np.empty((0,2), dtype=np.float32)
@@ -196,7 +200,8 @@ def filter_data(double mz_parent, np.ndarray[np.float32_t, ndim=2] data,
     
 def filter_data_multi(vector[double] mzvec, list datavec, int min_intensity,
                       int parent_filter_tolerance, int matched_peaks_window,
-                      int min_matched_peaks_search, object callback=None):
+                      int min_matched_peaks_search, double mz_min = 50.,
+                      object callback=None):
     cdef:
         list filtered = []
         np.ndarray[np.float32_t, ndim=2] tmp_array
@@ -213,7 +218,7 @@ def filter_data_multi(vector[double] mzvec, list datavec, int min_intensity,
         data_p[i] = <peak_t*>np_arr_pointer(tmp_array)
         data_sizes[i] = tmp_array.shape[0]
     
-    spectra = filter_data_multi_nogil(mzvec, data_p, data_sizes, min_intensity, parent_filter_tolerance, matched_peaks_window, min_matched_peaks_search, callback)
+    spectra = filter_data_multi_nogil(mzvec, data_p, data_sizes, min_intensity, parent_filter_tolerance, matched_peaks_window, min_matched_peaks_search, mz_min, callback)
     
     for i in range(size):
         peaks = spectra[i]

@@ -19,7 +19,8 @@ def query(fname: str, indices: List[int], mzvec: List[float],
           min_matched_peaks: int, min_intensity: int,
           parent_filter_tolerance: int, matched_peaks_window: int,
           min_matched_peaks_search: int, min_cosine: float,
-          analog_mz_tolerance: float=0., positive_polarity: bool=True,
+          analog_mz_tolerance: float=0., mz_min: float=50.,
+          positive_polarity: bool=True,
           callback: Callable[[int], bool]=None) -> Dict[int, List[Dict[str, Union[float, int]]]]:
     """
         Query an SQLite database containing MS/MS spectra for either standards
@@ -46,6 +47,7 @@ def query(fname: str, indices: List[int], mzvec: List[float],
             parent ion and a database hit's parent ion to classify the latter
             as analog. If *m/z* delta is lower than `mz_tolerance`, database
             result is considered to be a standard.
+        mz_min: All peaks with *m/z* below this value will be filtered out.
         positive_polarity: If True, only spectra with a positive or undefined
             polarity will be considered, otherwise look only for negative or
             undefined polarity.
@@ -70,8 +72,8 @@ def query(fname: str, indices: List[int], mzvec: List[float],
     conn = sqlite3.connect('file:{}?mode=ro'.format(fname), uri=True)
 
     # Get min/max mz values in list
-    mz_min = min(mzvec)
-    mz_max = max(mzvec)
+    mz_low = min(mzvec)
+    mz_high = max(mzvec)
 
     # Set tolerance
     tol = analog_mz_tolerance if analog_mz_tolerance > 0 else mz_tolerance
@@ -79,10 +81,10 @@ def query(fname: str, indices: List[int], mzvec: List[float],
     if len(databases) > 0:
         dbs = ','.join(['?' for _ in databases])
         c = conn.execute("SELECT id, pepmass, name, peaks, bank_id FROM spectra WHERE bank_id IN ({}) AND (positive = ? OR positive IS NULL) AND PEPMASS BETWEEN ? AND ?".format(dbs),
-                         (*databases, positive_polarity, mz_min-tol, mz_max+tol))
+                         (*databases, positive_polarity, mz_low-tol, mz_high+tol))
     else:
         c = conn.execute("SELECT id, pepmass, name, peaks, bank_id FROM spectra WHERE (positive = ? OR positive IS NULL) AND PEPMASS BETWEEN ? AND ?",
-                         (positive_polarity, mz_min-tol, mz_max+tol))
+                         (positive_polarity, mz_low-tol, mz_high+tol))
 
     results = c.fetchall()
     max_rows = len(results)
@@ -108,7 +110,7 @@ def query(fname: str, indices: List[int], mzvec: List[float],
             peaks = np.frombuffer(row[3], dtype='<f4').reshape(-1, 2)
             if len(peaks) > 0:
                 filtered = filter_data(pepmass, peaks, min_intensity, parent_filter_tolerance,
-                                       matched_peaks_window, min_matched_peaks_search)
+                                       matched_peaks_window, min_matched_peaks_search, mz_min)
                 for i in ids:
                     score = cosine_score(pepmass, filtered, mzvec[i], datavec[i],
                                          mz_tolerance, min_matched_peaks)
