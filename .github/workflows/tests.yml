@@ -23,23 +23,20 @@ jobs:
       fail-fast: false
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v4
       with:
         python-version: ${{ matrix.python-version }}
-    - name: Fix Python PATH on macOS
+    - name: Install OpenMP (macOS)
       if: runner.os == 'macOS'
       run: |
-        tee -a ~/.profile <<<'export PATH="$pythonLocation/bin:$PATH"'
+        brew install libomp
     - name: Show python info
       shell: bash -e {0}
       run: |
         which python
         python --version
-    - name: Add msbuild to PATH
-      uses: microsoft/setup-msbuild@v1
-      if: ${{ runner.os == 'Windows' }}
     - name: Build
       shell: bash -e {0}
       run: |
