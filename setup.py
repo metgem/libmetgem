@@ -11,11 +11,6 @@ HAS_CYTHON = _have_cython()
 if HAS_CYTHON:
     from Cython.Build import cythonize
 
-MAJOR = 0
-MINOR = 6
-MICRO = 2
-ISRELEASED = True
-VERSION = '%d.%d.%d' % (MAJOR, MINOR, MICRO)
 SRC_PATH = "libmetgem"
 
 if "--skip-build" in sys.argv:
@@ -94,53 +89,22 @@ if HAS_CYTHON:
                             compiler_directives=directives)
         
     install_requires = ["numpy", "scipy"]
-    setup_requires = ["cython>=0.28"] # Need Cython>=0.28 for read-only memoryview
     include_dirs = [np.get_include()]
 else:
     ext_modules = []
-    setup_requires = []
-    install_requires = ["numpy", "pyteomics", "scipy"]
+    install_requires = ["numpy", "pyteomics", "scipy", "versioneer"]
     include_dirs = []
 
 
 with open('libmetgem/_cython.py', 'w') as f:
     f.write(f"# THIS FILE IS GENERATED FROM LIBMETGEM SETUP.PY\n\nIS_CYTHONIZED = {bool(HAS_CYTHON)}\n")
-
-with open('README.rst', 'r') as f:
-    LONG_DESCRIPTION = f.read()
     
 setup(
-    name="libmetgem",
-    author = "Nicolas Elie",
-    author_email = "nicolas.elie@cnrs.fr",
-    url = "https://github.com/metgem/libmetgem",
-    version = versioneer.get_version(),
-    cmdclass = versioneer.get_cmdclass(),
-    description = "Library for Molecular Networking calculations",
-    long_description = LONG_DESCRIPTION,
-    keywords = ["chemistry", "molecular networking", "mass spectrometry"],
-    license = "GPLv3+",
-    classifiers = ["Development Status :: 4 - Beta",
-                   "Intended Audience :: Science/Research",
-                   "Intended Audience :: Developers",
-                   "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
-                   "Operating System :: OS Independent",
-                   "Topic :: Scientific/Engineering :: Bio-Informatics",
-                   "Topic :: Scientific/Engineering :: Chemistry",
-                   "Topic :: Software Development :: Libraries :: Python Modules",
-                   "Programming Language :: Cython",
-                   "Programming Language :: Python :: 3",
-                   "Programming Language :: Python :: 3.2",
-                   "Programming Language :: Python :: 3.3",
-                   "Programming Language :: Python :: 3.4",
-                   "Programming Language :: Python :: 3.5",
-                   "Programming Language :: Python :: 3.6",
-                   "Programming Language :: Python :: 3.7",
-                   "Programming Language :: Python :: 3.8"],
     ext_modules=ext_modules,
     packages = find_packages(),
     include_dirs=include_dirs,
-    setup_requires=setup_requires,
     install_requires=install_requires,
-    zip_safe=False
+    zip_safe=False,
+    version=versioneer.get_version(),
+    cmdclass=versioneer.get_cmdclass(),
 )
