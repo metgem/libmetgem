@@ -1,1 +1,4 @@
 numpy
+scipy
+cython>=0.28 # For read-only memoryview
+versioneer[toml]
