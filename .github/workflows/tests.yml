@@ -32,6 +32,11 @@ jobs:
       if: runner.os == 'macOS'
       run: |
         tee -a ~/.profile <<<'export PATH="$pythonLocation/bin:$PATH"'
+    - name: Show python info
+      shell: bash -l {0}
+      run: |
+        which python
+        python --version
     - name: Add msbuild to PATH
       uses: microsoft/setup-msbuild@v1
       if: ${{ runner.os == 'Windows' }}
