@@ -43,6 +43,10 @@ jobs:
       shell: bash -e {0}
       run: |
         python -m pip install . -vv
+      env:
+        LDFLAGS: -L/usr/local/opt/libomp/lib
+        CFLAGS: -I/usr/local/opt/libomp/include
+        CPPFLAGS: -I/usr/local/opt/libomp/include
     - name: Install test dependencies
       shell: bash -e {0}
       run: |
