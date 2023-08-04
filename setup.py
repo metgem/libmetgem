@@ -68,7 +68,7 @@ if HAS_CYTHON:
             Extension(
                 "libmetgem._neighbors",
                 [os.path.join(SRC_PATH, "_neighbors.pyx")],
-                extra_compile_args=[OPENMP_FLAGS],
+                extra_compile_args=[OPENMP_FLAGS, "-std=c++11"],
                 extra_link_args=[OPENMP_FLAGS]
             )
         ]
