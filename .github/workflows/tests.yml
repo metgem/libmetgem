@@ -34,7 +34,7 @@ jobs:
         brew info libomp
         echo "LDFLAGS=${LDFLAGS} -L$(brew --prefix libomp)/lib" >> "$GITHUB_ENV"
         echo "CPPFLAGS=${CPPFLAGS} -I$(brew --prefix libomp)/include" >> "$GITHUB_ENV"
-        echo "CXXLAGS=${CXXFLAGS} -std=c++11" >> "$GITHUB_ENV"
+        echo "CLAGS=${CFLAGS} -std=c++11" >> "$GITHUB_ENV"
     - name: Show python info
       shell: bash -e {0}
       run: |
