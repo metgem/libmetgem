@@ -31,12 +31,19 @@ jobs:
     - name: Install OpenMP (macOS)
       if: runner.os == 'macOS'
       run: |
-        brew install libomp
+        brew reinstall libomp
+        brew --prefix libomp
     - name: Show python info
       shell: bash -e {0}
       run: |
         which python
         python --version
+    - name: Show Compiler info
+      shell: bash -e {0}
+      run: |
+        echo ${CXX}
+        which ${CXX}
+        ${CXX} --version
     - name: Build
       shell: bash -e {0}
       run: |
