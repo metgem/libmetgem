@@ -57,6 +57,7 @@ jobs:
         python -c "import libmetgem"
         python -c "from libmetgem import IS_CYTHONIZED; assert IS_CYTHONIZED == True"
         python -c "from libmetgem.cosine import cosine_score; print(cosine_score)"
+        python -c "import libmetgem._cosine"
     - name: Test with pytest
       shell: bash -e {0}
       run: pytest --cov=libmetgem --cov-report=xml -s -x
