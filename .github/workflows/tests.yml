@@ -31,9 +31,10 @@ jobs:
     - name: Add OpenMP to path (macOS)
       if: runner.os == 'macOS'
       run: |
+        brew info libomp
         echo "$(brew --prefix libomp)/include"
         echo "$(brew --prefix libomp)/include" >> $GITHUB_PATH
-        echo $GITHUB_PATH
+        echo "$PATH"
     - name: Show python info
       shell: bash -e {0}
       run: |
