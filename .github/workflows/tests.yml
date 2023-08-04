@@ -28,22 +28,15 @@ jobs:
       uses: actions/setup-python@v4
       with:
         python-version: ${{ matrix.python-version }}
-    - name: Install OpenMP (macOS)
+    - name: Add OpenMP to path (macOS)
       if: runner.os == 'macOS'
       run: |
-        brew reinstall libomp
-        brew --prefix libomp
+        echo "$(brew --prefix libomp)/include" >> $GITHUB_PATH
     - name: Show python info
       shell: bash -e {0}
       run: |
         which python
         python --version
-    - name: Show Compiler info
-      shell: bash -e {0}
-      run: |
-        echo ${CXX}
-        which ${CXX}
-        ${CXX} --version
     - name: Build
       shell: bash -e {0}
       run: |
