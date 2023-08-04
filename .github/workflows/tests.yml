@@ -32,9 +32,8 @@ jobs:
       if: runner.os == 'macOS'
       run: |
         brew info libomp
-        echo "$(brew --prefix libomp)/include"
-        echo "$(brew --prefix libomp)/include" >> $GITHUB_PATH
-        echo "$PATH"
+        export LDFLAGS="-L$(brew --prefix libomp)/lib"
+        export CPPFLAGS="-I$(brew --prefix libomp)/include"
     - name: Show python info
       shell: bash -e {0}
       run: |
