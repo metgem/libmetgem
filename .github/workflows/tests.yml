@@ -31,7 +31,9 @@ jobs:
     - name: Add OpenMP to path (macOS)
       if: runner.os == 'macOS'
       run: |
+        echo "$(brew --prefix libomp)/include"
         echo "$(brew --prefix libomp)/include" >> $GITHUB_PATH
+        echo $GITHUB_PATH
     - name: Show python info
       shell: bash -e {0}
       run: |
@@ -45,7 +47,7 @@ jobs:
       shell: bash -e {0}
       run: |
         python -m pip install -q pytest pylint pytest-pylint pytest-cov codecov pytest-mock pyteomics cython
-    - name: Install xvfb
+    - name: Install xvfb (Linux)
       shell: bash -e {0}
       run: python -m pip install pytest-xvfb
       if: runner.os == 'Linux'
