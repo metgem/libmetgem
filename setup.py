@@ -40,8 +40,8 @@ if HAS_CYTHON:
             Extension(
                 "libmetgem._cosine",
                 [os.path.join(SRC_PATH, "_cosine.pyx")],
-                extra_compile_args=[OPENMP_FLAGS],
-                extra_link_args=[OPENMP_FLAGS]
+                extra_compile_args=OPENMP_FLAGS.split(),
+                extra_link_args=OPENMP_FLAGS.split()
             ),
             Extension(
                 "libmetgem._filter",
@@ -68,8 +68,8 @@ if HAS_CYTHON:
             Extension(
                 "libmetgem._neighbors",
                 [os.path.join(SRC_PATH, "_neighbors.pyx")],
-                extra_compile_args=[OPENMP_FLAGS, "-std=c++11"],
-                extra_link_args=[OPENMP_FLAGS]
+                extra_compile_args=[*OPENMP_FLAGS.split(), "-std=c++11"],
+                extra_link_args=OPENMP_FLAGS.split()
             )
         ]
     
