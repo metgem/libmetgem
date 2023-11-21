@@ -19,9 +19,8 @@ def query(fname: str, indices: List[int], mzvec: List[float],
           min_matched_peaks: int, min_intensity: int,
           parent_filter_tolerance: int, matched_peaks_window: int,
           min_matched_peaks_search: int, min_cosine: float,
-          analog_mz_tolerance: float=0., mz_min: float=50.,
-          positive_polarity: bool=True,
-          callback: Callable[[int], bool]=None) -> Dict[int, List[Dict[str, Union[float, int]]]]:
+          analog_mz_tolerance: float=0., positive_polarity: bool=True,
+          mz_min: float=50., callback: Callable[[int], bool]=None) -> Dict[int, List[Dict[str, Union[float, int]]]]:
     """
         Query an SQLite database containing MS/MS spectra for either standards
         (spectra with similar parent ion's *m/z* and similar MS/MS spectrum) or 

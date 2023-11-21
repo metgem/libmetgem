@@ -357,7 +357,7 @@ def query(str filename, vector[int] indices, vector[double] mzvec, list datavec,
           int min_intensity, int parent_filter_tolerance,
           int matched_peaks_window, int min_matched_peaks_search,
           double min_cosine, double analog_mz_tolerance=0.,
-          double mz_min = 50., bool positive_polarity=True, object callback=None):
+          bool positive_polarity=True, double mz_min = 50., object callback=None):
     cdef:
         bytes fname_bytes
         char *fname
