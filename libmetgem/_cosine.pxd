@@ -10,4 +10,4 @@ cpdef enum SpectraMatchState:
 
 cdef double cosine_score_nogil(double, peak_t*, np.npy_intp,
                                double, peak_t*, np.npy_intp,
-                               double, int) nogil
+                               double, int) noexcept nogil

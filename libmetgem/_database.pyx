@@ -171,7 +171,7 @@ cdef query_result_t query_nogil(char *fname, vector[int] indices,
                                 double analog_mz_tolerance=0.,
                                 bool positive_polarity=True,
                                 double mz_min = 50.,
-                                object callback=None) nogil:
+                                object callback=None) noexcept nogil:
     cdef:
         sqlite3 *db
         sqlite3_stmt *stmt

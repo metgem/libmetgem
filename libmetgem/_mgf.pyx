@@ -46,7 +46,7 @@ cdef extern from *:
     extern const char* CHARSET
     
     
-cdef inline double strtof(char* string, char **endptr) nogil:
+cdef inline double strtof(char* string, char **endptr) noexcept nogil:
     cdef char *ptr = NULL
     
     # Allow comma as decimal separator
@@ -56,7 +56,7 @@ cdef inline double strtof(char* string, char **endptr) nogil:
     return std_strtof(string, endptr)
     
     
-cdef void read_data(char line[MAX_LINE_SIZE], vector[peak_t] *peaklist, FILE *fp) nogil:
+cdef void read_data(char line[MAX_LINE_SIZE], vector[peak_t] *peaklist, FILE *fp) noexcept nogil:
     """Read peak list from file.
        First line has already been read and has to be passed as first argument.
        peak list is read into `peaklist`, which is cleared as first step."""

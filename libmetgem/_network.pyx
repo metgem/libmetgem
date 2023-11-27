@@ -19,10 +19,10 @@ ctypedef struct element_t:
     int index
     double cosine
   
-cdef bool compareElementsByCosine(const element_t &a, const element_t &b) nogil:
+cdef bool compareElementsByCosine(const element_t &a, const element_t &b) noexcept nogil:
     return a.cosine > b.cosine
     
-cdef bool compareInteractionsByCosine(const interaction_t &a, const interaction_t &b) nogil:
+cdef bool compareInteractionsByCosine(const interaction_t &a, const interaction_t &b) noexcept nogil:
     if a.cosine > b.cosine:
         return True
     elif a.cosine < b.cosine:
@@ -41,14 +41,14 @@ cdef bool compareInteractionsByCosine(const interaction_t &a, const interaction_
         return False
     else:
         return False
- 
+
 @cython.boundscheck(False)
 @cython.wraparound(False)
 cdef vector[interaction_t] generate_network_nogil(const float[:,:] scores_matrix,
                                                   vector[double] mzvec,
                                                   double pairs_min_cosine,
                                                   size_t top_k,
-                                                  object callback=None) nogil:
+                                                  object callback=None) noexcept nogil:
     cdef:
         vector[interaction_t] interactions, interactions2
         interaction_t inter

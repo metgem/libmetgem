@@ -57,11 +57,11 @@ cdef extern from *:
     extern const char* CHARSET
     
     
-cdef inline bool isdelim(char s) nogil:
+cdef inline bool isdelim(char s) noexcept nogil:
     return strchr(b'()[]{},;:', s) != NULL
     
     
-cdef inline void trim(char* string) nogil:
+cdef inline void trim(char* string) noexcept nogil:
     cdef:
         int i = 0
         int index = 0
@@ -91,7 +91,7 @@ cdef inline void trim(char* string) nogil:
     
     
 cdef void read_data(char line[MAX_LINE_SIZE], vector[peak_t] *peaklist,
-                    FILE *fp, int num_peaks) nogil:
+                    FILE *fp, int num_peaks) noexcept nogil:
     """Read peak list from file.
        First line has already been read and has to be passed as first argument.
        peak list is read into `peaklist`, which is cleared as first step."""

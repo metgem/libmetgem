@@ -24,10 +24,10 @@ from ._common cimport (score_t, np_arr_pointer,
                        arr_from_score_vector,
                        arr_from_1d_vector)
                        
-cdef double addScore(double sum, const score_t &b) nogil:
+cdef double addScore(double sum, const score_t &b) noexcept nogil:
     return sum + b.value
   
-cdef bool compareByScore(const score_t &a, const score_t &b) nogil:
+cdef bool compareByScore(const score_t &a, const score_t &b) noexcept nogil:
     return a.value > b.value
 
 
@@ -37,7 +37,7 @@ cdef vector[score_t] compare_spectra_nogil(double spectrum1_mz,
                                            double spectrum2_mz,
                                            peak_t *spectrum2_data,
                                            np.npy_intp spectrum2_size,
-                                           double mz_tolerance) nogil:
+                                           double mz_tolerance) noexcept nogil:
     cdef:
         double dm
         vector[score_t] scores
@@ -117,7 +117,7 @@ cdef double cosine_score_nogil(double spectrum1_mz,
                                peak_t *spectrum2_data,
                                np.npy_intp spectrum2_size,
                                double mz_tolerance,
-                               int min_matched_peaks) nogil:
+                               int min_matched_peaks) noexcept nogil:
     cdef:
         vector[score_t] matches = compare_spectra_nogil(spectrum1_mz,
                                                         spectrum1_data,

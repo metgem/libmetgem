@@ -28,7 +28,7 @@ cdef bool compareByMz(const peak_t &a, const peak_t &b) nogil:
 cdef vector[peak_t] parent_filter_nogil(double mz_parent, vector[peak_t] data,
                                         int min_intensity,
                                         int parent_filter_tolerance,
-                                        double mz_min = 50.) nogil:
+                                        double mz_min = 50.) noexcept nogil:
     cdef:
         int i
         float mz, intensity
@@ -64,7 +64,7 @@ cdef vector[peak_t] parent_filter_nogil(double mz_parent, vector[peak_t] data,
 @cython.cdivision(True)    
 cdef vector[peak_t] window_rank_filter_nogil(vector[peak_t] data,
                                              int matched_peaks_window,
-                                             int min_matched_peaks_search) nogil:
+                                             int min_matched_peaks_search) noexcept nogil:
     cdef:
         int i, j, count=0
         float mz
@@ -93,7 +93,7 @@ cdef vector[peak_t] window_rank_filter_nogil(vector[peak_t] data,
 @cython.boundscheck(False)
 @cython.wraparound(False)
 @cython.cdivision(True)
-cdef vector[peak_t] square_root_and_normalize_data_nogil(vector[peak_t] data) nogil:
+cdef vector[peak_t] square_root_and_normalize_data_nogil(vector[peak_t] data) noexcept nogil:
     cdef:
         int i
         double dot_product = 0.
@@ -123,7 +123,7 @@ cdef vector[peak_t] filter_data_nogil(double mz_parent, const peak_t *data,
                                       int parent_filter_tolerance,
                                       int matched_peaks_window,
                                       int min_matched_peaks_search,
-                                      double mz_min) nogil:
+                                      double mz_min) noexcept nogil:
     cdef vector[peak_t] peaks
 
     if data_size == 0:
@@ -156,7 +156,7 @@ cdef vector[vector[peak_t]] filter_data_multi_nogil(vector[double] mzvec,
                                                     int matched_peaks_window,
                                                     int min_matched_peaks_search,
                                                     double mz_min,
-                                                    object callback=None) nogil:
+                                                    object callback=None) noexcept nogil:
     cdef:
         vector[vector[peak_t]] spectra
         int i
