@@ -8,6 +8,7 @@ from libcpp cimport bool
 from libcpp.vector cimport vector
 from libcpp.algorithm cimport (sort, partial_sort)
 from libc.math cimport fabs
+from scipy.sparse import issparse
 
 ctypedef struct interaction_t:
     int source
@@ -44,13 +45,13 @@ cdef bool compareInteractionsByCosine(const interaction_t &a, const interaction_
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-cdef vector[interaction_t] generate_network_nogil(const float[:,:] scores_matrix,
-                                                  vector[double] mzvec,
-                                                  double pairs_min_cosine,
-                                                  size_t top_k,
-                                                  object callback=None) noexcept nogil:
+cdef vector[interaction_t] generate_network_dense_nogil(const float[:,:] scores_matrix,
+                                                        vector[double] mzvec,
+                                                        double pairs_min_cosine,
+                                                        size_t top_k,
+                                                        object callback=None) noexcept nogil:
     cdef:
-        vector[interaction_t] interactions, interactions2
+        vector[interaction_t] interactions
         interaction_t inter
         size_t size = min(<size_t>scores_matrix.shape[0], mzvec.size())
         int i, j
@@ -58,9 +59,6 @@ cdef vector[interaction_t] generate_network_nogil(const float[:,:] scores_matrix
         element_t element
         double cosine
         size_t length
-        int x, y
-        vector[int] x_ind, y_ind
-        bool flag
         bool has_callback = callback is not None
       
     for i in range(size):
@@ -106,6 +104,96 @@ cdef vector[interaction_t] generate_network_nogil(const float[:,:] scores_matrix
                 interactions.clear()
                 return interactions
             callback(-size) # Negative value means new maximum
+            
+    return topk_nogil(interactions, top_k, size, callback)
+
+
+@cython.boundscheck(False)
+@cython.wraparound(False)
+cdef vector[interaction_t] generate_network_sparse_nogil(const float[:] data,
+                                                         const int[:] indices,
+                                                         const int[:] indptr,
+                                                         size_t matrix_size,
+                                                         vector[double] mzvec,
+                                                         double pairs_min_cosine,
+                                                         size_t top_k,
+                                                         object callback=None) noexcept nogil:
+    cdef:
+        vector[interaction_t] interactions
+        interaction_t inter
+        size_t size = min(matrix_size, mzvec.size())
+        int i, j, k
+        vector[element_t] row
+        element_t element
+        double cosine
+        size_t length
+        bool has_callback = callback is not None
+    
+    for i in range(size):
+        row.clear()
+        row.reserve(size-i)
+        for k in range(indptr[i], indptr[i+1]):
+            j = indices[k]
+            if j <= i or j >= size:
+                continue
+            cosine = data[k]
+            if cosine > pairs_min_cosine >= 0:
+                element.index = j
+                element.cosine = cosine
+                row.push_back(element)
+                
+        if top_k > 0:
+            length = min(row.size(), top_k)
+            partial_sort(row.begin(), row.begin() + length,
+                         row.end(), &compareElementsByCosine)
+        else:
+            length = row.size()
+            sort(row.begin(), row.end(), &compareElementsByCosine)
+        
+        for j in range(length):
+            element = row[j]
+            inter.source = i
+            inter.target = element.index
+            inter.delta_mz = mzvec[i]-mzvec[element.index]
+            inter.cosine = element.cosine
+            interactions.push_back(inter)
+            
+        if has_callback and i>0 and i % 100 == 0:
+            with gil:
+                if not callback(100):
+                    interactions.clear()
+                    return interactions
+                    
+    # Free memory
+    row.clear()
+    row.shrink_to_fit()
+                
+    size = interactions.size()
+    if has_callback and size % 100 != 0:
+        with gil:
+            if not callback(size % 100):
+                interactions.clear()
+                return interactions
+            callback(-size) # Negative value means new maximum
+            
+    return topk_nogil(interactions, top_k, size, callback)
+
+
+
+@cython.boundscheck(False)
+@cython.wraparound(False)
+cdef vector[interaction_t] topk_nogil(vector[interaction_t] interactions,
+                                      size_t top_k,
+                                      size_t size,
+                                      object callback=None) noexcept nogil:
+        
+    cdef:
+        vector[interaction_t] interactions2
+        int i, j
+        int x, y
+        vector[int] x_ind, y_ind
+        bool flag
+        bool has_callback = callback is not None
         
     sort(interactions.begin(), interactions.end(), &compareInteractionsByCosine)
         
@@ -149,8 +237,6 @@ cdef vector[interaction_t] generate_network_nogil(const float[:,:] scores_matrix
             callback(size % 100)
             
     # Free memory
-    interactions.clear()
-    interactions.shrink_to_fit()
     x_ind.clear()
     x_ind.shrink_to_fit()
     y_ind.clear()
@@ -159,7 +245,7 @@ cdef vector[interaction_t] generate_network_nogil(const float[:,:] scores_matrix
     return interactions2
     
     
-def generate_network(const float[:,:] scores_matrix, vector[double] mzvec,
+def generate_network(scores_matrix, vector[double] mzvec,
                      double pairs_min_cosine, size_t top_k, object callback=None):
     cdef:
         vector[interaction_t] interactions
@@ -171,13 +257,21 @@ def generate_network(const float[:,:] scores_matrix, vector[double] mzvec,
                                 ('Cosine', np.float32)])
         np.ndarray array
         
-    interactions = generate_network_nogil(scores_matrix, mzvec,
-                                          pairs_min_cosine, top_k,
-                                          callback)
+    if issparse(scores_matrix):
+        interactions = generate_network_sparse_nogil(scores_matrix.data,
+                                                     scores_matrix.indices,
+                                                     scores_matrix.indptr,
+                                                     scores_matrix.shape[0],
+                                                     mzvec, pairs_min_cosine,
+                                                     top_k, callback)
+    else:
+        interactions = generate_network_dense_nogil(scores_matrix, mzvec,
+                                                    pairs_min_cosine, top_k,
+                                                    callback)
+    
     array = np.empty((interactions.size(),), dtype=dt)
     for i in range(array.shape[0]):
         inter = interactions[i]
         array[i] = (inter.source, inter.target, inter.delta_mz, inter.cosine)
         
     return array
-        

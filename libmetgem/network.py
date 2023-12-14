@@ -4,12 +4,13 @@
 
 from ._loader import load_cython
 
-from typing import List, Callable
+from typing import List, Callable, Union
+from scipy import sparse
 
 import numpy as np
 
 @load_cython
-def generate_network(scores_matrix: np.ndarray, mzs: List[float],
+def generate_network(scores_matrix: Union[np.ndarray, sparse.csr_matrix], mzs: List[float],
                      pairs_min_cosine: float, top_k: float,
                      callback: Callable[[int], bool]=None) -> np.ndarray:
     """
@@ -47,15 +48,31 @@ def generate_network(scores_matrix: np.ndarray, mzs: List[float],
     interactions = []
     size = min(scores_matrix.shape[0], len(mzs))
 
-    triu = np.triu(scores_matrix)[:size,:size]
-    triu[triu <= max(0, pairs_min_cosine)] = 0
-    np.fill_diagonal(triu, 0)  # remove self loops
+    if sparse.issparse(scores_matrix):
+        triu = sparse.triu(scores_matrix, format='csr')[:size,:size]
+    else:
+        triu = np.triu(scores_matrix)[:size,:size]
+    triu[triu < max(0, pairs_min_cosine)] = 0
+    
+    if sparse.issparse(scores_matrix):
+        triu.setdiag(0)
+    else:
+        np.fill_diagonal(triu, 0)  # remove self loops
+        
     for i in range(size):
+        row = triu[i,]
+        if sparse.issparse(row):
+            row = row.todense()
         # indexes = np.argpartition(triu[i,], -top_k)[-top_k:] # Should be faster and give the same results
-        indexes = np.argsort(triu[i,])
+        indexes = np.argsort(row)
         if top_k > 0:
             indexes = indexes[-top_k:]
-        indexes = indexes[triu[i, indexes] > 0]
+            
+        mask = triu[i, indexes] > 0
+        if sparse.issparse(mask):
+            mask = mask.todense()
+        indexes = indexes[mask]
+        indexes = np.ravel(indexes)
 
         for index in indexes:
             interactions.append((i, index, mzs[i] - mzs[index], triu[i, index]))
