@@ -1,12 +1,12 @@
 """
-Test `libmetgem.cosine.compute_similarity_matrix`.
+Test `libmetgem.score.compute_similarity_matrix`.
 """
 
 import pytest
 import numpy as np
 
 from libmetgem import IS_CYTHONIZED
-from libmetgem.cosine import compute_similarity_matrix
+from libmetgem.score import compute_similarity_matrix
 
 from data import (matrix, random_spectra,
                   mz_tolerance, min_matched_peaks)

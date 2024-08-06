@@ -1,12 +1,12 @@
 """
-Test `libmetgem.cosine.cosine_score`
+Test `libmetgem.score`
 """
 
 import pytest
 import numpy as np
 
 from libmetgem import IS_CYTHONIZED
-from libmetgem.cosine import cosine_score, entropy_score, weighted_entropy_score
+from libmetgem.score import cosine_score, entropy_score, weighted_entropy_score
 from funcs import score_f_gen
 
 from data import (known_scores, random_spectrum, another_random_spectrum,
@@ -81,13 +81,12 @@ def test_score_python_cython(scoring, random_spectrum, another_random_spectrum,
     
     args = (*random_spectrum(scoring), *another_random_spectrum(scoring),
             mz_tolerance, min_matched_peaks)
-    match scoring:
-        case 'cosine':
-            func = cosine_score
-        case 'entropy':
-            func = entropy_score
-        case 'weighted_entropy':
-            func = weighted_entropy_score
+    if scoring == 'cosine':
+        func = cosine_score
+    elif scoring == 'entropy':
+        func = entropy_score
+    elif scoring == 'weighted_entropy':
+        func = weighted_entropy_score
     score_p = func.__wrapped__(*args)
     score_c = func(*args)
     assert pytest.approx(score_p) == score_c

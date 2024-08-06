@@ -42,19 +42,11 @@ if HAS_CYTHON:
                 [os.path.join(SRC_PATH, "_filter.pyx")]
             ),
             Extension(
-                "libmetgem._cosine",
-                [os.path.join(SRC_PATH, "_cosine.pyx")],
+                "libmetgem._score",
+                [os.path.join(SRC_PATH, "_score.pyx")],
+                extra_compile_args=OPENMP_FLAGS.split(),
+                extra_link_args=OPENMP_FLAGS.split()
             ),
-            # Extension(
-                # "libmetgem._entropy",
-                # [os.path.join(SRC_PATH, "_entropy.pyx")],
-            # ),
-            # Extension(
-                # "libmetgem._score",
-                # [os.path.join(SRC_PATH, "_score.pyx")],
-                # extra_compile_args=OPENMP_FLAGS.split(),
-                # extra_link_args=OPENMP_FLAGS.split()
-            # ),
             Extension(
                 "libmetgem._mgf",
                 [os.path.join(SRC_PATH, "_mgf.pyx")]

@@ -4,7 +4,7 @@
 
 from ._loader import load_cython
 from .filter import filter_data
-from .cosine import generic_score
+from .score import generic_score
 
 import time
 import numpy as np

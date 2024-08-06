@@ -14,19 +14,19 @@ ctypedef struct interaction_t:
     int source
     int target
     double delta_mz
-    double cosine
+    double score
     
 ctypedef struct element_t:
     int index
-    double cosine
+    double score
   
-cdef bool compareElementsByCosine(const element_t &a, const element_t &b) noexcept nogil:
-    return a.cosine > b.cosine
+cdef bool compareElementsByScore(const element_t &a, const element_t &b) noexcept nogil:
+    return a.score > b.score
     
-cdef bool compareInteractionsByCosine(const interaction_t &a, const interaction_t &b) noexcept nogil:
-    if a.cosine > b.cosine:
+cdef bool compareInteractionsByScore(const interaction_t &a, const interaction_t &b) noexcept nogil:
+    if a.score > b.score:
         return True
-    elif a.cosine < b.cosine:
+    elif a.score < b.score:
         return False
     elif a.source > b.source:
         return True
@@ -57,7 +57,7 @@ cdef vector[interaction_t] generate_network_dense_nogil(const float[:,:] scores_
         int i, j
         vector[element_t] row
         element_t element
-        double cosine
+        double score
         size_t length
         bool has_callback = callback is not None
       
@@ -65,26 +65,26 @@ cdef vector[interaction_t] generate_network_dense_nogil(const float[:,:] scores_
         row.clear()
         row.reserve(size-i)
         for j in range(i+1, size): # i+1 to remove self loops
-            cosine = scores_matrix[i, j]
-            if cosine > pairs_min_cosine >= 0:
+            score = scores_matrix[i, j]
+            if score > pairs_min_cosine >= 0:
                 element.index = j
-                element.cosine = cosine
+                element.score = score
                 row.push_back(element)
                 
         if top_k > 0:
             length = min(row.size(), top_k)
             partial_sort(row.begin(), row.begin() + length,
-                         row.end(), &compareElementsByCosine)
+                         row.end(), &compareElementsByScore)
         else:
             length = row.size()
-            sort(row.begin(), row.end(), &compareElementsByCosine)
+            sort(row.begin(), row.end(), &compareElementsByScore)
         
         for j in range(length):
             element = row[j]
             inter.source = i
             inter.target = element.index
             inter.delta_mz = mzvec[i]-mzvec[element.index]
-            inter.cosine = element.cosine
+            inter.score = element.score
             interactions.push_back(inter)
             
         if has_callback and i>0 and i % 100 == 0:
@@ -125,7 +125,7 @@ cdef vector[interaction_t] generate_network_sparse_nogil(const float[:] data,
         int i, j, k
         vector[element_t] row
         element_t element
-        double cosine
+        double score
         size_t length
         bool has_callback = callback is not None
     
@@ -136,26 +136,26 @@ cdef vector[interaction_t] generate_network_sparse_nogil(const float[:] data,
             j = indices[k]
             if j <= i or j >= size:
                 continue
-            cosine = data[k]
-            if cosine > pairs_min_cosine >= 0:
+            score = data[k]
+            if score > pairs_min_cosine >= 0:
                 element.index = j
-                element.cosine = cosine
+                element.score = score
                 row.push_back(element)
                 
         if top_k > 0:
             length = min(row.size(), top_k)
             partial_sort(row.begin(), row.begin() + length,
-                         row.end(), &compareElementsByCosine)
+                         row.end(), &compareElementsByScore)
         else:
             length = row.size()
-            sort(row.begin(), row.end(), &compareElementsByCosine)
+            sort(row.begin(), row.end(), &compareElementsByScore)
         
         for j in range(length):
             element = row[j]
             inter.source = i
             inter.target = element.index
             inter.delta_mz = mzvec[i]-mzvec[element.index]
-            inter.cosine = element.cosine
+            inter.score = element.score
             interactions.push_back(inter)
             
         if has_callback and i>0 and i % 100 == 0:
@@ -195,7 +195,7 @@ cdef vector[interaction_t] topk_nogil(vector[interaction_t] interactions,
         bool flag
         bool has_callback = callback is not None
         
-    sort(interactions.begin(), interactions.end(), &compareInteractionsByCosine)
+    sort(interactions.begin(), interactions.end(), &compareInteractionsByScore)
         
     # Top K algorithm, keep only edges between two nodes if and only if each
     # of the node appeared in each other’s respective top k most similar nodes
@@ -272,6 +272,6 @@ def generate_network(scores_matrix, vector[double] mzvec,
     array = np.empty((interactions.size(),), dtype=dt)
     for i in range(array.shape[0]):
         inter = interactions[i]
-        array[i] = (inter.source, inter.target, inter.delta_mz, inter.cosine)
+        array[i] = (inter.source, inter.target, inter.delta_mz, inter.score)
         
     return array

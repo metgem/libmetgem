@@ -1,12 +1,12 @@
 """
-Test `libmetgem.cosine.compare_spectra`
+Test `libmetgem.score.compare_spectra`
 """
 
 import pytest
 import numpy as np
 
 from libmetgem import IS_CYTHONIZED
-from libmetgem.cosine import compare_spectra
+from libmetgem.score import compare_spectra
 from funcs import compare_spectra_f
 
 from data import (known_spectra_comparisons, random_spectrum, another_random_spectrum,

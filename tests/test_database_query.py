@@ -9,7 +9,7 @@ import os
 
 from libmetgem import IS_CYTHONIZED, MZ, INTENSITY
 from libmetgem.filter import filter_data
-from libmetgem.cosine import cosine_score
+from libmetgem.score import cosine_score
 from libmetgem.database import query
 from funcs import query_f
     

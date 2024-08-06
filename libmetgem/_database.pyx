@@ -15,7 +15,7 @@ cimport numpy as np
 
 from ._filter cimport filter_data_nogil
 from ._common cimport peak_t, np_arr_pointer
-from ._cosine cimport generic_score_nogil
+from ._score cimport generic_score_nogil
 from ._common cimport (score_algorithm_t,
                        str_to_score_algorithm,
                        norm_method_t,
