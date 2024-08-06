@@ -32,6 +32,14 @@ def read(filename: str, ignore_unknown: bool=False) -> Tuple[dict, np.ndarray]:
     from pyteomics import mgf
     from pyteomics.auxiliary import PyteomicsError
     
+    # Monkey patch MGFBase.parse_pepmass_charge to allow comma as float separator
+    if hasattr(mgf.MGFBase, 'parse_pepmass_charge'):
+        @staticmethod
+        def parse_pepmass_charge(pepmass_str):
+            return _parse_pepmass_charge(pepmass_str.replace(",", "."))
+        _parse_pepmass_charge = mgf.MGFBase.parse_pepmass_charge
+        mgf.MGFBase.parse_pepmass_charge = parse_pepmass_charge
+    
     try:
         for entry in mgf.read(filename, convert_arrays=1, read_charges=True, dtype=np.float32, use_index=False):
             params = entry.get('params', {})

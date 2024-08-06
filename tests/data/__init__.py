@@ -11,12 +11,12 @@ from funcs import compute_similarity_matrix_f, kneighbors_graph_from_similarity_
 __all__ = ('known_filtered_spectrum', 'known_spectrum'
            'known_spectrum_filter_comparison',
            'known_spectra_filter_comparison',
-           'known_cosines', 'known_spectra_comparisons',
+           'known_scores', 'known_spectra_comparisons',
            'random_spectrum', 'another_random_spectrum', 'random_spectra',
            'mz_tolerance', 'min_matched_peaks',
            'min_intensity', 'parent_filter_tolerance',
            'matched_peaks_window', 'min_matched_peaks_search',
-           'pairs_min_cosine', 'top_k',
+           'pairs_min_score', 'top_k',
            'valid_mgf', 'invalid_mgf', 'empty_mgf', 'noions_mgf',
            'valid_msp', 'invalid_msp', 'empty_msp', 'noions_msp',
            'matrix', 'sparse_matrix', 'neighbors_graph', 'random_matrix')
@@ -27,86 +27,139 @@ MIN_INTENSITIES = (0, 10, 100)
 PARENT_FILTER_TOLERANCES = (0, 17, 50)
 MATCHED_PEAKS_WINDOWS = (0, 50, 100)
 MIN_MATCHED_PEAKS_SEARCHS = (0, 6, 12)
-PAIRS_MIN_COSINES = (0, 0.3, 0.7)
+PAIRS_MIN_SCORES = (0, 0.3, 0.7)
 TOP_KS = (0, 1, 10)
 MZ_MINS = (20, 50, 100.)
 
 MZS = (723.3371, 885.3909, 643.2885, 643.289, 487.2665, 545.2717)
-SPECTRA = {}
-SPECTRA_UNFILTERED = {}
+NORMS = {'dot', 'sum'}
+SPECTRA = {'unfiltered': {},
+           'dot': {},
+           'sum': {}
+}
 dir = os.path.dirname(__file__)
 for i, mz in enumerate(MZS):
-    SPECTRA[i] = np.load(os.path.join(dir, str(i) + ".npy")) \
-        .astype(np.float32)
-    SPECTRA[i].flags.writeable = False
-    SPECTRA_UNFILTERED[i] = np.load(os.path.join(dir, str(i) + "u.npy")) \
-        .astype(np.float32)
-    SPECTRA_UNFILTERED[i].flags.writeable = False
-        
-COSINES = {
-    (0, 1): (0.02, 4, 0.7249),
-    (2, 3): (0.02, 4, 1.0),
-    (4, 5): (0.02, 4, 0.5342),
-    (0, 2): (0.02, 4, 0.0)
+    # *nds.npy = normalized dot (dot product 1) squared
+    SPECTRA['dot'][i] = np.load(os.path.join(dir, str(i) + "nds.npy")).astype(np.float32)
+    SPECTRA['dot'][i].flags.writeable = False
+    # *ns.npy = normalized sum (sum to 1)
+    SPECTRA['sum'][i] = np.load(os.path.join(dir, str(i) + "ns.npy")).astype(np.float32)
+    SPECTRA['sum'][i].flags.writeable = False
+    # *u.npy = unfiltered
+    SPECTRA['unfiltered'][i] = np.load(os.path.join(dir, str(i) + "u.npy")).astype(np.float32)
+    SPECTRA['unfiltered'][i].flags.writeable = False
+
+IDS = [(0, 1), (2, 3), (4, 5), (0, 2)]
+
+SCORES = {
+    'cosine': {
+        (0, 1): (0.02, 4, 0.7249),
+        (2, 3): (0.02, 4, 1.0),
+        (4, 5): (0.02, 4, 0.5342),
+        (0, 2): (0.02, 4, 0.0)
+    },
+    'entropy': {
+        (0, 1): (0.02, 4, 0.7210),
+        (2, 3): (0.02, 4, 1.0000),
+        (4, 5): (0.02, 4, 0.4832),
+        (0, 2): (0.02, 4, 0.0000)
+    },
+    'weighted_entropy': {
+        (0, 1): (0.02, 4, 0.4714),
+        (2, 3): (0.02, 4, 1.0000),
+        (4, 5): (0.02, 4, 0.4640),
+        (0, 2): (0.02, 4, 0.0000)
     }
+}
 
 SPECTRA_COMPARISONS = {
-    (0, 1): (0.02, [(0, 0, 0.6465, 0), (5, 1, 0.0473, 0), (7, 3, 0.0209, 0), (14, 4, 0.0102, 0)]),
-    (2, 3): (0.02, [(0, 0, 0.1763, 0), (1, 1, 0.1346, 0), (2, 2, 0.1343, 0), (3,  3, 0.1100, 0), (4, 4, 0.0989, 0),
-                    (5, 5, 0.0961, 0), (6, 6, 0.0951, 0), (7, 7, 0.0704, 0), (8,  8, 0.0426, 0), (9, 9, 0.0417, 0)]),
-    (4, 5): (0.02, [(0, 1, 0.3187, 0), (2, 4, 0.0576, 1), (1, 6, 0.0572, 0), (18, 0, 0.0438, 1), (6, 3, 0.0358, 1),
-                    (17, 5, 0.0211, 1)]),
-    (0, 2): (0.02, [])
+    'cosine': {
+        (0, 1): (0.02, [(0, 0, 0.6465, 0), (5, 1, 0.0473, 0), (7, 3, 0.0209, 0), (14, 4, 0.0102, 0)]),
+        (2, 3): (0.02, [(0, 0, 0.1763, 0), (1, 1, 0.1346, 0), (2, 2, 0.1343, 0), (3,  3, 0.1100, 0), (4, 4, 0.0989, 0),
+                        (5, 5, 0.0961, 0), (6, 6, 0.0951, 0), (7, 7, 0.0704, 0), (8,  8, 0.0426, 0), (9, 9, 0.0417, 0)]),
+        (4, 5): (0.02, [(0, 1, 0.3187, 0), (2, 4, 0.0576, 1), (1, 6, 0.0572, 0), (18, 0, 0.0438, 1), (6, 3, 0.0358, 1),
+                        (17, 5, 0.0211, 1)]),
+        (0, 2): (0.02, [])
+        },
+    'entropy': {
+        (0, 1): (0.02, [(0, 0, 1.2917, 0), (5, 1, 0.0893, 0), (7, 3, 0.0412, 0), (14, 4, 0.0198, 0)]),
+        (2, 3): (0.02, [(0, 0, 0.3526, 0), (1, 1, 0.2691, 0), (2, 2, 0.2686, 0), (3, 3, 0.2201, 0), (4, 4, 0.1978, 0),
+                        (5, 5, 0.1921, 0), (6, 6, 0.1901, 0), (7, 7, 0.1408, 0), (8, 8, 0.0853, 0), (9, 9, 0.0835, 0)]),
+        (4, 5): (0.02, [(0, 1, 0.5923, 0), (2, 4, 0.1153, 1), (1, 6, 0.1121, 0), (6, 3, 0.0672, 1), (18, 0, 0.0438, 1),
+                        (17, 5, 0.0356, 1)]),
+        (0, 2): (0.02, [])
+        },
+    'weighted_entropy': {
+        (0, 1): (0.02, [(0, 0, 0.7035, 0), (5, 1, 0.1205, 0), (7, 3, 0.0743, 0), (14, 4, 0.0445, 0)]),
+        (2, 3): (0.02, [(0, 0, 0.3199, 0), (1, 1, 0.2574, 0), (2, 2, 0.2570, 0), (3, 3, 0.2189, 0), (4, 4, 0.2009, 0),
+                        (5, 5, 0.1962, 0), (6, 6, 0.1946, 0), (7, 7, 0.1528, 0), (8, 8, 0.1020, 0), (9, 9, 0.1003, 0)]),
+        (4, 5): (0.02, [(0, 1, 0.4566, 0), (2, 4, 0.1282, 1), (1, 6, 0.1234, 0), (6, 3, 0.0884, 1), (18, 0, 0.0749, 1),
+                        (17, 5, 0.0565, 1)]),
+        (0, 2): (0.02, [])
+        }
     }
         
-@pytest.fixture(params=range(len(MZS)), scope="session")
+@pytest.fixture(params=list(itertools.product(NORMS, range(len(MZS)))), scope="session")
 def known_filtered_spectrum(request):
-    return MZS[request.param], SPECTRA[request.param]
+    norm, id = request.param
+    return MZS[id], SPECTRA[norm][id]
 
     
 @pytest.fixture(params=range(len(MZS)), scope="session")
 def known_spectrum(request):
-    return MZS[request.param], SPECTRA_UNFILTERED[request.param]
+    return MZS[request.param], SPECTRA['unfiltered'][request.param]
     
       
-@pytest.fixture(params=range(len(MZS)), scope="session")
+@pytest.fixture(params=list(itertools.product(NORMS, range(len(MZS)))), scope="session")
 def known_spectrum_filter_comparison(request):
-    return (MZS[request.param],
-           SPECTRA_UNFILTERED[request.param],
-           SPECTRA[request.param])
+    norm, id = request.param
+    return (norm,
+            MZS[id],
+            SPECTRA['unfiltered'][id],
+            SPECTRA[norm][id])
            
 
-@pytest.fixture(params=range(len(MZS)), scope="session")
+@pytest.fixture(params=list(NORMS), scope="session")
 def known_spectra_filter_comparison(request):
+    norm = request.param
     mzs = []
     spectra = []
     unfiltered_spectra = []
     for i in range(len(MZS)):
         mzs.append(MZS[i])
-        unfiltered_spectra.append(SPECTRA_UNFILTERED[i])
-        spectra.append(SPECTRA[i])
+        unfiltered_spectra.append(SPECTRA['unfiltered'][i])
+        spectra.append(SPECTRA[norm][i])
         
-    return mzs, unfiltered_spectra, spectra
+    return norm, mzs, unfiltered_spectra, spectra
 
            
-@pytest.fixture(params=COSINES.keys(), scope="session")           
-def known_cosines(request):
-    if request.param in COSINES:
-        return (MZS[request.param[0]],
-                MZS[request.param[1]],
-                SPECTRA[request.param[0]],
-                SPECTRA[request.param[1]],
-                *COSINES[request.param])
+@pytest.fixture(params=list(itertools.product(SCORES.keys(), IDS)), scope="session")
+def known_scores(request):
+    scoring, (id1, id2) = request.param
+    if scoring in SCORES:
+        if (id1, id2) in SCORES[scoring]:
+            spectra = SPECTRA['dot'] if scoring == 'cosine' else SPECTRA['sum']
+            scores = SCORES[scoring]
+            return (scoring,
+                    MZS[id1],
+                    MZS[id2],
+                    spectra[id1],
+                    spectra[id2],
+                    *scores[(id1, id2)])
     
-@pytest.fixture(params=SPECTRA_COMPARISONS.keys(), scope="session")           
+@pytest.fixture(params=list(itertools.product(SPECTRA_COMPARISONS.keys(), IDS)), scope="session")
 def known_spectra_comparisons(request):
-    if request.param in SPECTRA_COMPARISONS:
-        return (MZS[request.param[0]],
-                MZS[request.param[1]],
-                SPECTRA[request.param[0]],
-                SPECTRA[request.param[1]],
-                *SPECTRA_COMPARISONS[request.param])
-           
+    scoring, (id1, id2) = request.param
+    if scoring in SPECTRA_COMPARISONS:
+        if (id1, id2) in SPECTRA_COMPARISONS[scoring]:
+            spectra = SPECTRA['dot'] if scoring == 'cosine' else SPECTRA['sum']
+            comparisons = SPECTRA_COMPARISONS[scoring]
+            return (scoring,
+                    MZS[id1],
+                    MZS[id2],
+                    spectra[id1],
+                    spectra[id2],
+                    *comparisons[(id1, id2)])
            
 def _random_spectrum(seed=0):
     np.random.seed(seed)
@@ -119,14 +172,46 @@ def _random_spectrum(seed=0):
     
     # Data array should be c-contiguous
     data = np.ascontiguousarray(data).astype(np.float32)
-        
-    # Intensities should be normalized before computing cosine scores
-    data[:, INTENSITY] = data[:, INTENSITY] / np.sqrt(data[:, INTENSITY] @ data[:, INTENSITY])
-    
-    # Make data array immutable
-    data.flags.writeable = False
-    
+
     return parent, data
+
+
+class SpectrumGenerator:
+    def __init__(self, seed):
+        self.spec = _random_spectrum(seed)
+        
+    def __call__(self, scoring):
+        parent, data = self.spec
+        data = data.copy()
+        
+        # Intensities should be normalized before computing cosine scores
+        if scoring == 'cosine':
+            data[:, INTENSITY] = data[:, INTENSITY] / np.sqrt(data[:, INTENSITY] @ data[:, INTENSITY])
+        else:
+            data[:, INTENSITY] = data[:, INTENSITY] / data[:, INTENSITY].sum()
+    
+        # Make data array immutable
+        data.flags.writeable = False
+        
+        return parent, data
+        
+    def __repr__(self):
+        return "<{}>".format(self.__class__.__name__)
+        
+class SpectraGenerator:
+    def __init__(self, seed, n):
+        self.seed = seed
+        self.n = n
+        
+    def __call__(self, scoring):
+        mzs = []
+        spectra = []
+        for i in range(self.n):
+            mz, data = SpectrumGenerator(self.seed+i)(scoring)
+            mzs.append(mz)
+            spectra.append(data)
+            
+        return mzs, spectra
 
     
 @pytest.fixture(params=range(10), scope="session")
@@ -134,7 +219,7 @@ def random_spectrum(request):
     """Creates a fake plausible spectrum with random numbers
     """
     
-    return _random_spectrum(request.param)
+    return SpectrumGenerator(request.param)
     
     
 @pytest.fixture(params=range(10), scope="session")
@@ -143,22 +228,15 @@ def another_random_spectrum(request):
        random spectra.
     """
     
-    return _random_spectrum(request.param * 1000)
+    return SpectrumGenerator(request.param * 1000)
 
-    
+  
 @pytest.fixture(params=range(10), scope="session")
 def random_spectra(request):
     """Creates a few random spectra.
     """
     
-    mzs = []
-    spectra = []
-    for i in range(10):
-        mz, data = _random_spectrum(request.param+i)
-        mzs.append(mz)
-        spectra.append(data)
-        
-    return mzs, spectra
+    return SpectraGenerator(request.param, 10)
 
     
 @pytest.fixture(params=MZ_TOLERANCES, scope="session")
@@ -210,9 +288,9 @@ def min_matched_peaks_search(request):
     return request.param
     
     
-@pytest.fixture(params=PAIRS_MIN_COSINES, scope="session")
-def pairs_min_cosine(request):
-    """Provides some values for `generate_network`' `pairs_min_cosine`
+@pytest.fixture(params=PAIRS_MIN_SCORES, scope="session")
+def pairs_min_score(request):
+    """Provides some values for `generate_network`' `pairs_min_score`
        parameter.
     """
     
@@ -248,7 +326,7 @@ def valid_mgf(tmpdir_factory):
         content.append("FEATURE_ID={}".format(i+1))
         content.append("FORMULA=C11H22NO4")
         content.append("PEPMASS={}".format(MZS[i]))
-        for mz, intensity in SPECTRA_UNFILTERED[i]:
+        for mz, intensity in SPECTRA['unfiltered'][i]:
             content.append("{} {}".format(mz, intensity))
         content.append("END IONS")
         content.append("")
@@ -259,7 +337,7 @@ def valid_mgf(tmpdir_factory):
     
     p.write("\n".join(content)) 
     
-    return MZS, SPECTRA_UNFILTERED, p
+    return MZS, SPECTRA['unfiltered'], p
     
 
 @pytest.fixture(scope="session")
@@ -318,7 +396,7 @@ def invalid_mgf(tmpdir_factory, valid_mgf, request):
         content.append(line)
     p.write("\n".join(content))
     
-    return MZS, SPECTRA_UNFILTERED, p
+    return MZS, SPECTRA['unfiltered'], p
     
     
 @pytest.fixture(scope="session")
@@ -335,8 +413,8 @@ def valid_msp(tmpdir_factory):
         content.append("EXACTMASS: {}".format(MZS[i]))
         content.append("SYNONYM: foo, bar")
         content.append("RETENTIONTIME: 2.58")
-        content.append("Num Peaks: {}".format(len(SPECTRA_UNFILTERED[i])))
-        for mz, intensity in SPECTRA_UNFILTERED[i]:
+        content.append("Num Peaks: {}".format(len(SPECTRA['unfiltered'][i])))
+        for mz, intensity in SPECTRA['unfiltered'][i]:
             content.append("{} {}".format(mz, intensity))
         content.append("")
         
@@ -346,7 +424,7 @@ def valid_msp(tmpdir_factory):
     
     p.write("\n".join(content))    
     
-    return MZS, SPECTRA_UNFILTERED, p
+    return MZS, SPECTRA['unfiltered'], p
     
 
 @pytest.fixture(scope="session")
@@ -409,32 +487,34 @@ def invalid_msp(tmpdir_factory, valid_msp, request):
         content.append(line)
     p.write("\n".join(content))
     
-    return MZS, SPECTRA_UNFILTERED, p
+    return MZS, SPECTRA['unfiltered'], p
     
     
-@pytest.fixture(params=list(itertools.product(MZ_TOLERANCES, MIN_MATCHED_PEAKS)),
+@pytest.fixture(params=list(itertools.product(SPECTRA_COMPARISONS.keys(), MZ_TOLERANCES, MIN_MATCHED_PEAKS)),
                 scope='session')
 def matrix(request, random_spectra, compute_similarity_matrix_f):
-    """Compute similarity matrix for different `mz_tolerance` and
+    """Compute similarity matrix for different `scoring`, `mz_tolerance` and
         `min_matched_peaks` combinations.
     """
     
-    mzs, spectra = random_spectra
-    m = compute_similarity_matrix_f(mzs, spectra, request.param[0], request.param[1], dense_output=True)
+    scoring, mz_tolerance, min_matched_peaks = request.param
+    mzs, spectra = random_spectra(scoring)
+    m = compute_similarity_matrix_f(mzs, spectra, mz_tolerance, min_matched_peaks, scoring, dense_output=True)
     m.flags.writeable = False
     
     return m
     
     
-@pytest.fixture(params=list(itertools.product(MZ_TOLERANCES, MIN_MATCHED_PEAKS)),
+@pytest.fixture(params=list(itertools.product(SPECTRA_COMPARISONS.keys(), MZ_TOLERANCES, MIN_MATCHED_PEAKS)),
                 scope='session')
 def sparse_matrix(request, random_spectra, compute_similarity_matrix_f):
-    """Compute similarity matrix for different `mz_tolerance` and
+    """Compute similarity matrix for different `scoring`, `mz_tolerance` and
         `min_matched_peaks` combinations.
     """
     
-    mzs, spectra = random_spectra
-    m = compute_similarity_matrix_f(mzs, spectra, request.param[0], request.param[1], dense_output=False)
+    scoring, mz_tolerance, min_matched_peaks = request.param
+    mzs, spectra = random_spectra(scoring)
+    m = compute_similarity_matrix_f(mzs, spectra, mz_tolerance, min_matched_peaks, scoring, dense_output=False)
     
     return m
     

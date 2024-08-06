@@ -11,7 +11,7 @@ import numpy as np
 
 @load_cython
 def generate_network(scores_matrix: Union[np.ndarray, sparse.csr_matrix], mzs: List[float],
-                     pairs_min_cosine: float, top_k: float,
+                     pairs_min_score: float, top_k: float,
                      callback: Callable[[int], bool]=None) -> np.ndarray:
     """
         Generate a network graph from a pairwise distance matrix applying a
@@ -20,7 +20,7 @@ def generate_network(scores_matrix: Union[np.ndarray, sparse.csr_matrix], mzs: L
     Args:
         scores_matrix: pairwise distance matrix.
         mzs: List of parent ions' *m/z*.
-        pairs_min_cosine: minimum cosine score between a pair of spectra in
+        pairs_min_score: minimum cosine score between a pair of spectra in
             order for an edge to be kept in the network.
         top_k: edges between two nodes are kept only if both nodes are within
             each other's `top_k` most similar nodes.
@@ -52,7 +52,7 @@ def generate_network(scores_matrix: Union[np.ndarray, sparse.csr_matrix], mzs: L
         triu = sparse.triu(scores_matrix, format='csr')[:size,:size]
     else:
         triu = np.triu(scores_matrix)[:size,:size]
-    triu[triu < max(0, pairs_min_cosine)] = 0
+    triu[triu < max(0, pairs_min_score)] = 0
     
     if sparse.issparse(scores_matrix):
         triu.setdiag(0)

@@ -1,4 +1,4 @@
 numpy
 scipy
-cython>=0.28 # For read-only memoryview
+cython>=3.0 #>=0.28 for read-only memoryview, >=3.0 for libc.math.log2f
 versioneer[toml]

@@ -15,7 +15,11 @@ cimport numpy as np
 
 from ._filter cimport filter_data_nogil
 from ._common cimport peak_t, np_arr_pointer
-from ._cosine cimport cosine_score_nogil
+from ._cosine cimport generic_score_nogil
+from ._common cimport (score_algorithm_t,
+                       str_to_score_algorithm,
+                       norm_method_t,
+                       str_to_norm_method)
 
 from sqlite3 import (InternalError, DataError, DatabaseError, OperationalError,
                      IntegrityError, ProgrammingError)
@@ -167,10 +171,13 @@ cdef query_result_t query_nogil(char *fname, vector[int] indices,
                                 double mz_tolerance, int min_matched_peaks,
                                 int min_intensity, int parent_filter_tolerance,
                                 int matched_peaks_window,
-                                int min_matched_peaks_search, double min_cosine,
+                                int min_matched_peaks_search, double min_score,
                                 double analog_mz_tolerance=0.,
                                 bool positive_polarity=True,
                                 double mz_min = 50.,
+                                score_algorithm_t score_algorithm = score_algorithm_t.cosine,
+                                bool square_root=True,
+                                norm_method_t norm_method=norm_method_t.dot,
                                 object callback=None) noexcept nogil:
     cdef:
         sqlite3 *db
@@ -181,7 +188,7 @@ cdef query_result_t query_nogil(char *fname, vector[int] indices,
         int blob_size
         size_t size = mzvec.size()
         char query[4096]
-        double cosine_mz_tolerance, score
+        double score
         int i
         unsigned int j
         int ret
@@ -305,12 +312,13 @@ cdef query_result_t query_nogil(char *fname, vector[int] indices,
                     filtered = filter_data_nogil(pepmass, blob, blob_size,
                                              min_intensity, parent_filter_tolerance,
                                              matched_peaks_window, min_matched_peaks_search,
-                                             mz_min)
+                                             mz_min, square_root, norm_method)
                     for i in ids:
-                        score = cosine_score_nogil(pepmass, filtered.data(), filtered.size(),
-                                                   mzvec[i], datavec[i], data_sizes[i],
-                                                   mz_tolerance, min_matched_peaks)
-                        if score > min_cosine:
+                        score = generic_score_nogil(
+                            pepmass, filtered.data(), filtered.size(),
+                            mzvec[i], datavec[i], data_sizes[i],
+                            mz_tolerance, min_matched_peaks, score_algorithm)
+                        if score > min_score:
                             r.score = score
                             r.id = sqlite3_column_int(stmt, 0)
                             r.bank_id = sqlite3_column_int(stmt, 4)
@@ -356,8 +364,11 @@ def query(str filename, vector[int] indices, vector[double] mzvec, list datavec,
           vector[int] databases, double mz_tolerance, int min_matched_peaks,
           int min_intensity, int parent_filter_tolerance,
           int matched_peaks_window, int min_matched_peaks_search,
-          double min_cosine, double analog_mz_tolerance=0.,
-          bool positive_polarity=True, double mz_min = 50., object callback=None):
+          double min_score, double analog_mz_tolerance=0.,
+          bool positive_polarity=True, double mz_min = 50.,
+          score_algorithm: str = 'cosine',
+          square_root: bool = True, norm: str = 'dot',
+          object callback=None):
     cdef:
         bytes fname_bytes
         char *fname
@@ -370,6 +381,8 @@ def query(str filename, vector[int] indices, vector[double] mzvec, list datavec,
         query_result_t qr
         vector[db_result_t] results
         db_result_t r
+        score_algorithm_t algorithm = str_to_score_algorithm(score_algorithm)
+        norm_method_t norm_method = str_to_norm_method(norm)
         
     data_p.resize(size)
     data_sizes.resize(size)
@@ -379,13 +392,13 @@ def query(str filename, vector[int] indices, vector[double] mzvec, list datavec,
         
     fname_bytes = filename.encode(CHARSET)
     fname = fname_bytes
-
+    
     qr = query_nogil(fname, indices, mzvec, data_p, data_sizes, databases,
                      mz_tolerance, min_matched_peaks, min_intensity,
                      parent_filter_tolerance, matched_peaks_window,
-                     min_matched_peaks_search, min_cosine,
+                     min_matched_peaks_search, min_score,
                      analog_mz_tolerance, positive_polarity,
-                     mz_min, callback)
+                     mz_min, algorithm, square_root, norm_method, callback)
                      
     # Free memory
     data_sizes.clear()

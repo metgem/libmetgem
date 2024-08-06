@@ -20,7 +20,7 @@ from data import (random_spectra,
                   min_matched_peaks_search)
                  
 @pytest.fixture(scope="session")
-def db(tmpdir_factory, random_spectra, request):
+def db(tmpdir_factory, scoring, random_spectra, request):
     """Creates a database with randomly generated spectra inside.
     """
     
@@ -37,7 +37,7 @@ def db(tmpdir_factory, random_spectra, request):
     for i in range(10):
         c.execute("INSERT INTO banks (id, name) VALUES (?, ?)", (i, "bank" + str(i)))
         
-    mzs, spectra = random_spectra
+    mzs, spectra = random_spectra(scoring)
     
     q = """INSERT INTO spectra (id, bank_id, pepmass, name, positive, peaks)
            VALUES (?, ?, ?, ?, ?, ?)"""
@@ -50,10 +50,10 @@ def db(tmpdir_factory, random_spectra, request):
         
     conn.commit()
     conn.close()
-    return p, random_spectra
+    return p, (mzs, spectra)
     
    
-def test_query_random_spectra(db, query_f):
+def test_query_random_spectra(db, scoring, query_f):
     """Test if looking for a spectra that is for sure in database will
        successfully returns this spectra.
     """
@@ -61,9 +61,14 @@ def test_query_random_spectra(db, query_f):
     p, (mzs, spectra) = db
     
     for i, (mz, data) in enumerate(zip(mzs, spectra)):
-        filtered = filter_data(mz, data, 0, 17, 50, 6, 50)
+        filtered = filter_data(mz, data, 0, 17, 50, 6, 50,
+                               square_root=True if scoring == 'cosine' else False,
+                               norm='dot' if scoring == 'cosine' else 'sum')
         results = query_f(str(p), [i], [mz], [filtered], [],
-                          0.02, 0, 0, 17, 50, 6, 0.)
+                          0.02, 0, 0, 17, 50, 6, 0., mz_min=50,
+                          score_algorithm=scoring,
+                          square_root=True if scoring == 'cosine' else False,
+                          norm='dot' if scoring == 'cosine' else 'sum')
         assert i in results
         seen_i = False
         for r in results[i]:
@@ -74,7 +79,7 @@ def test_query_random_spectra(db, query_f):
             
             if r['id'] == i:
                 seen_i = True
-                assert pytest.approx(r['score']) == 1.0
+                assert r['score'] == pytest.approx(1.0)
         assert seen_i
         
         

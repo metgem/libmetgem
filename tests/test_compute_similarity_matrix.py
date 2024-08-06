@@ -8,7 +8,8 @@ import numpy as np
 from libmetgem import IS_CYTHONIZED
 from libmetgem.cosine import compute_similarity_matrix
 
-from data import matrix, random_spectra, mz_tolerance, min_matched_peaks
+from data import (matrix, random_spectra,
+                  mz_tolerance, min_matched_peaks)
 from funcs import compute_similarity_matrix_f
 
 
@@ -66,71 +67,74 @@ def test_matrix_dtype(matrix):
     
     
 @pytest.mark.python
-def test_matrix_sparse(random_spectra, mz_tolerance, min_matched_peaks):
-    """Cythonized `compute_similarity_matrix` and it's fallback Python version
-        should give the same results.
+def test_matrix_sparse(scoring, random_spectra, mz_tolerance, min_matched_peaks):
+    """Sparse and dense results should be equivalent.
     """
     
-    mzs, spectra = random_spectra
+    mzs, spectra = random_spectra(scoring)
     
     matrix_s = compute_similarity_matrix(mzs, spectra,
                                          mz_tolerance,
                                          min_matched_peaks,
+                                         scoring,
                                          dense_output=False)
     matrix = compute_similarity_matrix(mzs, spectra,
                                        mz_tolerance,
-                                       min_matched_peaks)
+                                       min_matched_peaks,
+                                       scoring)
     assert pytest.approx(matrix_s.toarray()) == matrix
 
     
 @pytest.mark.python
 @pytest.mark.skipif(not IS_CYTHONIZED, reason="libmetgem should be cythonized")
-def test_matrix_python_cython(random_spectra, mz_tolerance, min_matched_peaks):
+def test_matrix_python_cython(scoring, random_spectra, mz_tolerance, min_matched_peaks):
     """Cythonized `compute_similarity_matrix` and it's fallback Python version
         should give the same results.
     """
     
-    mzs, spectra = random_spectra
+    mzs, spectra = random_spectra(scoring)
     
     matrix_p = compute_similarity_matrix.__wrapped__(mzs, spectra,
                                                    mz_tolerance,
-                                                   min_matched_peaks)
+                                                   min_matched_peaks,
+                                                   scoring)
     matrix_c = compute_similarity_matrix(mzs, spectra,
                                        mz_tolerance,
-                                       min_matched_peaks)
+                                       min_matched_peaks,
+                                       scoring)
     assert pytest.approx(matrix_p) == matrix_c
 
 
-def test_matrix_callback_count(random_spectra, mz_tolerance, min_matched_peaks, mocker, compute_similarity_matrix_f):
+def test_matrix_callback_count(scoring, random_spectra, mz_tolerance, min_matched_peaks, mocker, compute_similarity_matrix_f):
     """callback shoud be called one times per spectrum."""
         
     callback = mocker.Mock(return_value=True)
     
-    mzs, spectra = random_spectra
-    matrix = compute_similarity_matrix_f(mzs, spectra, mz_tolerance, min_matched_peaks, callback)
+    mzs, spectra = random_spectra(scoring)
+    matrix = compute_similarity_matrix_f(mzs, spectra, mz_tolerance, min_matched_peaks, scoring, callback=callback)
     
     assert callback.call_count == len(mzs)
     
-def test_matrix_callback_abort(random_spectra, mz_tolerance, min_matched_peaks, mocker, compute_similarity_matrix_f):
+def test_matrix_callback_abort(scoring, random_spectra, mz_tolerance, min_matched_peaks, mocker, compute_similarity_matrix_f):
     """process should be stopped if callback return False."""
         
     callback = mocker.Mock(return_value=False)
        
-    mzs, spectra = random_spectra
-    matrix = compute_similarity_matrix_f(mzs, spectra, mz_tolerance, min_matched_peaks, callback)
+    mzs, spectra = random_spectra(scoring)
+    matrix = compute_similarity_matrix_f(mzs, spectra, mz_tolerance, min_matched_peaks, scoring, callback=callback)
     
     if compute_similarity_matrix_f == 'python':
         assert callback.call_count == 1
     else:
         assert callback.call_count < len(mzs)
     
-def test_matrix_callback_values(random_spectra, mz_tolerance, min_matched_peaks, mocker, compute_similarity_matrix_f):
+def test_matrix_callback_values(scoring, random_spectra, mz_tolerance, min_matched_peaks, mocker, compute_similarity_matrix_f):
     """callback shoud be called with increasing values. Cythonized one has no order."""
         
     callback = mocker.Mock(return_value=True)
        
-    mzs, spectra = random_spectra
-    matrix = compute_similarity_matrix_f(mzs, spectra, mz_tolerance, min_matched_peaks, callback)
+    mzs, spectra = random_spectra(scoring)
+    matrix = compute_similarity_matrix_f(mzs, spectra, mz_tolerance, min_matched_peaks, scoring, callback=callback)
     
     calls = [mocker.call(i) for i in range(len(mzs))]
     any_order = compute_similarity_matrix_f.variant == 'cython'

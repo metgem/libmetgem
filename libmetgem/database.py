@@ -4,7 +4,7 @@
 
 from ._loader import load_cython
 from .filter import filter_data
-from .cosine import cosine_score
+from .cosine import generic_score
 
 import time
 import numpy as np
@@ -18,9 +18,11 @@ def query(fname: str, indices: List[int], mzvec: List[float],
           datavec: List[np.ndarray], databases: List[int], mz_tolerance: float,
           min_matched_peaks: int, min_intensity: int,
           parent_filter_tolerance: int, matched_peaks_window: int,
-          min_matched_peaks_search: int, min_cosine: float,
+          min_matched_peaks_search: int, min_score: float,
           analog_mz_tolerance: float=0., positive_polarity: bool=True,
-          mz_min: float=50., callback: Callable[[int], bool]=None) -> Dict[int, List[Dict[str, Union[float, int]]]]:
+          mz_min: float=50., score_algorithm: str = 'cosine',
+          square_root: bool = True, norm: str = 'dot',
+          callback: Callable[[int], bool]=None) -> Dict[int, List[Dict[str, Union[float, int]]]]:
     """
         Query an SQLite database containing MS/MS spectra for either standards
         (spectra with similar parent ion's *m/z* and similar MS/MS spectrum) or 
@@ -41,7 +43,7 @@ def query(fname: str, indices: List[int], mzvec: List[float],
         parent_filter_tolerance: Used to filter database spectra.
         matched_peaks_window: Used to filter database spectra.
         min_matched_peaks_search: Used to filter database spectra.
-        min_cosine: Keeps only hits with a score higher than this value.
+        min_score: Keeps only hits with a score higher than this value.
         analog_mz_tolerance: Maximum *m/z* difference between a spectrum's
             parent ion and a database hit's parent ion to classify the latter
             as analog. If *m/z* delta is lower than `mz_tolerance`, database
@@ -109,11 +111,12 @@ def query(fname: str, indices: List[int], mzvec: List[float],
             peaks = np.frombuffer(row[3], dtype='<f4').reshape(-1, 2)
             if len(peaks) > 0:
                 filtered = filter_data(pepmass, peaks, min_intensity, parent_filter_tolerance,
-                                       matched_peaks_window, min_matched_peaks_search, mz_min)
+                                       matched_peaks_window, min_matched_peaks_search, mz_min,
+                                       square_root, norm)
                 for i in ids:
-                    score = cosine_score(pepmass, filtered, mzvec[i], datavec[i],
-                                         mz_tolerance, min_matched_peaks)
-                    if score > min_cosine:
+                    score = generic_score(pepmass, filtered, mzvec[i], datavec[i],
+                                          mz_tolerance, min_matched_peaks, score_algorithm)
+                    if score > min_score:
                         name = row[2]
                         name = name if name is not None else 'Unknown'
                         r = {'score': score, 'id': row[0], 'bank_id': row[4], 'name': row[2]}

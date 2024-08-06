@@ -44,17 +44,17 @@ def window_rank_filter(data: np.ndarray,
 
     return data
     
-     
-def square_root_and_normalize_data(data: np.ndarray, copy: bool=True) -> np.ndarray:
+
+@load_cython
+def square_root_data(data: np.ndarray, copy: bool=True) -> np.ndarray:
     """
-        Replace intensities of an MS/MS spectrum with their square-root and
-        normalize intensities to norm 1.
+        Replace intensities of an MS/MS spectrum with their square-root.
         
     Args:
         data: A 2D array representing an MS/MS spectrum.
         
     Returns:
-        A copy of the array with intensities square-rooted and normalised to 1.
+        A copy of the array with intensities square-rooted.
         
     See Also:
         filter_data
@@ -68,18 +68,50 @@ def square_root_and_normalize_data(data: np.ndarray, copy: bool=True) -> np.ndar
     
     # Use square root of intensities to minimize/maximize effects of high/low intensity peaks
     data[:, INTENSITY] = np.sqrt(data[:, INTENSITY]) * 10
-
-    # Normalize data to norm 1
-    data[:, INTENSITY] = data[:, INTENSITY] / np.sqrt(data[:, INTENSITY] @ data[:, INTENSITY])
+    
+    return data
+    
+    
+@load_cython
+def normalize_data(data: np.ndarray, norm='dot', copy: bool=True) -> np.ndarray:
+    """
+        Normalize intensities of an MS/MS spectrum to norm 1.
+        
+    Args:
+        data: A 2D array representing an MS/MS spectrum.
+        norm: A string reprensenting normalization method.
+            Can be 'dot' for dot product normalization
+            or 'sum' to normalize the intensities to sum to 1.
+        
+    Returns:
+        A copy of the array with intensities normalised.
+        
+    See Also:
+        filter_data
+    """
+    
+    if data.size == 0:
+        return data
+        
+    if copy:
+        data = data.copy()
+    
+    if norm == 'sum':
+        # Normalize the intensity to sum to 1
+        data[:, INTENSITY] = data[:, INTENSITY] / data[:, INTENSITY].sum()
+    else:
+        # Normalize data to norm 1
+        data[:, INTENSITY] = data[:, INTENSITY] / np.sqrt(data[:, INTENSITY] @ data[:, INTENSITY])
     
     return data
 
-                
+
 @load_cython
 def filter_data(mz_parent: float, data: np.ndarray, min_intensity: int,
                 parent_filter_tolerance: int, matched_peaks_window: float,
                 min_matched_peaks_search: float,
-                mz_min: float = 50.) -> np.ndarray:
+                mz_min: float = 50.,
+                square_root: bool=True, norm: str='dot') -> np.ndarray:
     """
         6-step filter of an array representing an MS/MS spectrum:
             * Low mass filtering: Remove all peaks with *m/z* lower than `mz_min`.
@@ -107,6 +139,10 @@ def filter_data(mz_parent: float, data: np.ndarray, min_intensity: int,
         min_matched_peaks_search: Control how many peaks to keep at each step
             during the `window rank filtering` step.
         mz_min: All peaks with *m/z* below this value will be filtered out.
+        square_root: Whether the intensities should be square-rooted.
+        norm: A string reprensenting normalization method.
+            Can be 'dot' for dot product normalization
+            or 'sum' to normalize the intensities to sum to 1.
     
     Returns:
         A filtered array.
@@ -122,7 +158,12 @@ def filter_data(mz_parent: float, data: np.ndarray, min_intensity: int,
     if matched_peaks_window > 0 and min_matched_peaks_search > 0:
         data = window_rank_filter(data, matched_peaks_window, min_matched_peaks_search)
         
-    data = square_root_and_normalize_data(data, copy = True)
+    if square_root:
+        square_func = getattr(square_root_data, '__wrapped__', square_root_data)
+        data = square_func(data)
+    
+    norm_func = getattr(normalize_data, '__wrapped__', normalize_data)
+    data = norm_func(data, norm, copy = True)
     
     return data
 
@@ -133,6 +174,7 @@ def filter_data_multi(mzvec: List[float], datavec: List[np.ndarray],
                       matched_peaks_window: float,
                       min_matched_peaks_search: float,
                       mz_min: float = 50.,
+                      square_root: bool=True, norm: str='dot',
                       callback: Callable[[int], bool]=None) -> List[np.ndarray]:
                       
     """
@@ -149,6 +191,10 @@ def filter_data_multi(mzvec: List[float], datavec: List[np.ndarray],
         min_matched_peaks_search: Control how many peaks to keep at each step
             during the `window rank filtering` step.
         mz_min: All peaks with *m/z* below this value will be filtered out.
+        square_root: Whether the intensities should be square-rooted.
+        norm: A string reprensenting normalization method.
+            Can be 'dot' for dot product normalization
+            or 'sum' to normalize the intensities to sum to 1.
         callback: function called to track progress of computation. First
             parameter (`int`) is the number of spectra computed since last call.
             It should return True if processing should continue, or False if
@@ -168,7 +214,8 @@ def filter_data_multi(mzvec: List[float], datavec: List[np.ndarray],
 
     for i in range(size):
         result.append(filter_data(mzvec[i], datavec[i], min_intensity, parent_filter_tolerance,
-                                  matched_peaks_window, min_matched_peaks_search, mz_min))
+                                  matched_peaks_window, min_matched_peaks_search, mz_min,
+                                  square_root, norm))
         if has_callback and i % 10 == 0:
             callback(10)
 

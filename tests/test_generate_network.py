@@ -11,7 +11,7 @@ from libmetgem.network import generate_network
 from funcs import generate_network_f
 
 from data import (matrix, random_matrix,
-                  pairs_min_cosine, top_k)
+                  pairs_min_score, top_k)
 
 
 def test_random_matrix(random_matrix):
@@ -111,7 +111,7 @@ def test_generate_network_all_zero(random_matrix, generate_network_f, sparse):
 @pytest.mark.parametrize("sparse", [True, False])
 def test_generate_network_high_top_k(random_matrix, generate_network_f, sparse):
     """
-        If top_k is high and pairs_min_cosine is zero, we should get all
+        If top_k is high and pairs_min_score is zero, we should get all
         possibles interactions excluding self loops.
     """
     
@@ -129,11 +129,11 @@ def test_generate_network_high_top_k(random_matrix, generate_network_f, sparse):
     
 
 @pytest.mark.parametrize("sparse", [True, False])
-@pytest.mark.parametrize("pairs_min_cosine", [1, 2, 3])
-def test_generate_network_high_pairs_min_cosine(random_matrix, generate_network_f,
-                                                pairs_min_cosine, top_k, sparse):
+@pytest.mark.parametrize("pairs_min_score", [1, 2, 3])
+def test_generate_network_high_pairs_min_score(random_matrix, generate_network_f,
+                                               pairs_min_score, top_k, sparse):
     """
-        If pairs_min_cosine is higher than 1, we should get an empty array.
+        If pairs_min_score is higher than 1, we should get an empty array.
     """
     
     mzs, matrix = random_matrix
@@ -142,15 +142,15 @@ def test_generate_network_high_pairs_min_cosine(random_matrix, generate_network_
         matrix = csr_matrix(matrix)
 
     interactions = generate_network_f(matrix, mzs,
-                                    pairs_min_cosine, top_k)
+                                    pairs_min_score, top_k)
     
     assert interactions.size == 0
     
 
 @pytest.mark.parametrize("sparse", [True, False])
-@pytest.mark.parametrize("pairs_min_cosine", [0, 0.3, 0.7, 1])
+@pytest.mark.parametrize("pairs_min_score", [0, 0.3, 0.7, 1])
 def test_generate_network_self_loop(random_matrix, generate_network_f,
-                                    pairs_min_cosine, top_k, sparse):
+                                    pairs_min_score, top_k, sparse):
     """
         Output array should not include self-loops
     """
@@ -161,19 +161,19 @@ def test_generate_network_self_loop(random_matrix, generate_network_f,
         matrix = csr_matrix(matrix)
 
     interactions = generate_network_f(matrix, mzs,
-                                    pairs_min_cosine, top_k)
+                                    pairs_min_score, top_k)
     count = len([source for source, target, _, _ in interactions if source == target])
     
     assert count == 0
     
 
 @pytest.mark.parametrize("sparse", [True, False])
-@pytest.mark.parametrize("pairs_min_cosine", [-0.2, 0, 0.3, 0.7])    
-def test_generate_network_pairs_min_cosine(random_matrix, generate_network_f,
-                                           pairs_min_cosine, sparse):
+@pytest.mark.parametrize("pairs_min_score", [-0.2, 0, 0.3, 0.7])    
+def test_generate_network_pairs_min_score(random_matrix, generate_network_f,
+                                           pairs_min_score, sparse):
     """
         All cosine scores in outputted array should be strictly higher than
-        pairs_min_cosine. Values lower than pairs_min_cosine and negative cosine
+        pairs_min_score. Values lower than pairs_min_score and negative cosine
         scores should be filtered out.
         
     """
@@ -182,18 +182,18 @@ def test_generate_network_pairs_min_cosine(random_matrix, generate_network_f,
     
     matrix = matrix.copy()
     
-    matrix[0, 1] = matrix[1, 0] = pairs_min_cosine + 0.1
-    matrix[0, 2] = matrix[2, 0] = pairs_min_cosine - 0.1
+    matrix[0, 1] = matrix[1, 0] = pairs_min_score + 0.1
+    matrix[0, 2] = matrix[2, 0] = pairs_min_score - 0.1
 
     if sparse:
         matrix = csr_matrix(matrix)
 
     interactions = generate_network_f(matrix, mzs,
-                                    pairs_min_cosine, 0)
+                                    pairs_min_score, 0)
                                     
     seen1, seen2 = False, False
     for source, target, delta, cosine in interactions:
-        assert cosine > pairs_min_cosine
+        assert cosine > pairs_min_score
         assert matrix[source, target] == cosine
         if (source == 0 and target == 1) or (source == 1 and target == 0):
             seen1 = True
@@ -210,7 +210,7 @@ def test_generate_network_pairs_min_cosine(random_matrix, generate_network_f,
 @pytest.mark.skipif(not IS_CYTHONIZED, reason="libmetgem should be cythonized")
 @pytest.mark.parametrize("sparse", [True, False])
 def test_generate_network_python_cython(random_matrix,
-                              pairs_min_cosine, top_k, sparse):
+                              pairs_min_score, top_k, sparse):
     """Cythonized `generate_network` and it's fallback Python version should
        give the same results.
     """
@@ -221,9 +221,9 @@ def test_generate_network_python_cython(random_matrix,
         matrix = csr_matrix(matrix)
     
     interactions_p = generate_network.__wrapped__(matrix, mzs,
-                                    pairs_min_cosine, 0)
+                                    pairs_min_score, 0)
     interactions_c = generate_network(matrix, mzs,
-                                    pairs_min_cosine, 0)
+                                    pairs_min_score, 0)
     
     assert interactions_p.shape == interactions_c.shape
     assert interactions_p.dtype == interactions_c.dtype
@@ -236,16 +236,16 @@ def test_generate_network_python_cython(random_matrix,
 
 
 def test_generate_network_sparse_dense(random_matrix,
-                              pairs_min_cosine, top_k,):
+                              pairs_min_score, top_k,):
     """`generate_network` should output the same result with sparse or dense input
     if input is the same"""
     
     mzs, matrix = random_matrix
     
     interactions_s = generate_network(csr_matrix(matrix), mzs,
-                                    pairs_min_cosine, 0)
+                                    pairs_min_score, 0)
     interactions_d = generate_network(matrix, mzs,
-                                    pairs_min_cosine, 0)
+                                    pairs_min_score, 0)
     
     assert interactions_s.shape == interactions_d.shape
     assert interactions_s.dtype == interactions_d.dtype

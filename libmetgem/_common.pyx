@@ -92,3 +92,14 @@ cdef void *np_arr_pointer(np.ndarray[numeric, ndim=2] data):
     if not data.flags['C_CONTIGUOUS']:
         data = np.ascontiguousarray(data, dtype=data.dtype)
     return <void *>&data[0, 0]
+
+cdef score_algorithm_t str_to_score_algorithm(str score):
+    if score == 'weighted_entropy':
+        return score_algorithm_t.weighted_entropy
+    elif score == 'entropy':
+        return score_algorithm_t.entropy
+    else:
+        return score_algorithm_t.cosine
+        
+cdef norm_method_t str_to_norm_method(str norm):
+    return norm_method_t.sum if norm == 'sum' else norm_method_t.dot

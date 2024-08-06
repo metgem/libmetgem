@@ -14,7 +14,8 @@ from libcpp.algorithm cimport sort
 cdef extern from "<algorithm>" namespace "std" nogil:
     Iter min_element[Iter, Compare](Iter first, Iter last, Compare comp) except +
 
-from ._common cimport peak_t, arr_from_peaks_vector, np_arr_pointer
+from ._common cimport (peak_t, arr_from_peaks_vector, np_arr_pointer,
+                       norm_method_t, str_to_norm_method)
 
 cdef bool compareByIntensity(const peak_t &a, const peak_t &b) nogil:
     return a.intensity > b.intensity
@@ -93,25 +94,43 @@ cdef vector[peak_t] window_rank_filter_nogil(vector[peak_t] data,
 @cython.boundscheck(False)
 @cython.wraparound(False)
 @cython.cdivision(True)
-cdef vector[peak_t] square_root_and_normalize_data_nogil(vector[peak_t] data) noexcept nogil:
+cdef vector[peak_t] square_root_data_nogil(vector[peak_t] data) noexcept nogil:
     cdef:
         int i
-        double dot_product = 0.
-        peak_t peak
         size_t size
-        float intensity
     
     size = data.size()
     for i in range(size):
-        peak = data[i]
-        peak.intensity = <float> (sqrt(peak.intensity) * 10)  # Use square root of intensities to minimize/maximize effects of high/low intensity peaks
-        dot_product += peak.intensity * peak.intensity  # Calculate dot product for later normalization
+        data[i].intensity = <float> (sqrt(data[i].intensity) * 10)  # Use square root of intensities to minimize/maximize effects of high/low intensity peaks
         
-    # Normalize data to norm 1       
-    dot_product = sqrt(dot_product)
-    for i in range(size):
-        data[i].intensity = <float> (sqrt(data[i].intensity) * 10 / dot_product)  # Use square root of intensities to minimize/maximize effects of high/low intensity peaks
-        
+    return data
+    
+    
+@cython.boundscheck(False)
+@cython.wraparound(False)
+@cython.cdivision(True)
+cdef vector[peak_t] normalize_data_nogil(vector[peak_t] data, norm_method_t norm_method=norm_method_t.dot) noexcept nogil:
+    cdef:
+        int i
+        double accum = 0.
+        size_t size = data.size()
+    
+    if norm_method == norm_method_t.sum:            
+        # Normalize the intensity to sum to 1
+        for i in range(size):
+            accum += data[i].intensity
+            
+        for i in range(size):
+            data[i].intensity /= accum
+    else:
+        # Normalize data to norm 1
+        for i in range(size):
+            accum += data[i].intensity * data[i].intensity  # Calculate dot product for later normalization
+            
+        accum = sqrt(accum)
+        for i in range(size):
+            data[i].intensity = <float> (data[i].intensity / accum)
+            
     return data
     
     
@@ -123,7 +142,9 @@ cdef vector[peak_t] filter_data_nogil(double mz_parent, const peak_t *data,
                                       int parent_filter_tolerance,
                                       int matched_peaks_window,
                                       int min_matched_peaks_search,
-                                      double mz_min) noexcept nogil:
+                                      double mz_min,
+                                      bool square_root=True,
+                                      norm_method_t norm_method=norm_method_t.dot) noexcept nogil:
     cdef vector[peak_t] peaks
 
     if data_size == 0:
@@ -140,7 +161,10 @@ cdef vector[peak_t] filter_data_nogil(double mz_parent, const peak_t *data,
     if matched_peaks_window > 0 and min_matched_peaks_search > 0:
         peaks = window_rank_filter_nogil(peaks, matched_peaks_window, min_matched_peaks_search)
         
-    peaks = square_root_and_normalize_data_nogil(peaks)
+    if square_root:
+        peaks = square_root_data_nogil(peaks)
+    
+    peaks = normalize_data_nogil(peaks, norm_method)
     
     return peaks
     
@@ -156,6 +180,8 @@ cdef vector[vector[peak_t]] filter_data_multi_nogil(vector[double] mzvec,
                                                     int matched_peaks_window,
                                                     int min_matched_peaks_search,
                                                     double mz_min,
+                                                    bool square_root=True,
+                                                    norm_method_t norm_method=norm_method_t.dot,
                                                     object callback=None) noexcept nogil:
     cdef:
         vector[vector[peak_t]] spectra
@@ -169,7 +195,10 @@ cdef vector[vector[peak_t]] filter_data_multi_nogil(vector[double] mzvec,
     for i in prange(<int>size, schedule='guided'):
         data_size = data_sizes[i]
         data_p = datavec[i]
-        spectra[i] = filter_data_nogil(mzvec[i], data_p, data_size, min_intensity, parent_filter_tolerance, matched_peaks_window, min_matched_peaks_search, mz_min)
+        spectra[i] = filter_data_nogil(mzvec[i], data_p, data_size,
+                                       min_intensity, parent_filter_tolerance,
+                                       matched_peaks_window, min_matched_peaks_search,
+                                       mz_min, square_root, norm_method)
         if has_callback and i % 100 == 0:
             with gil:
                 callback(100)
@@ -180,12 +209,68 @@ cdef vector[vector[peak_t]] filter_data_multi_nogil(vector[double] mzvec,
         
     return spectra
       
+
+def square_root_data(np.ndarray[np.float32_t, ndim=2] data):
+    cdef np.ndarray[np.float32_t, ndim=2] squared
+    cdef vector[peak_t] peaks
+    cdef peak_t* data_p = <peak_t*>np_arr_pointer(data)
+
+    if data.shape[0] == 0:
+        return peaks
+
+    peaks.assign(data_p, data_p+data.shape[0])
+    peaks = square_root_data_nogil(peaks)
+    
+    if peaks.size() == 0:
+        return np.empty((0,2), dtype=np.float32)
+        
+    squared = arr_from_peaks_vector(peaks)
+    
+    # Free memory
+    peaks.clear()
+    peaks.shrink_to_fit()
+    
+    return squared
+    
+    
+def normalize_data(np.ndarray[np.float32_t, ndim=2] data, norm='dot'):
+    cdef:
+        np.ndarray[np.float32_t, ndim=2] normalized
+        vector[peak_t] peaks
+        peak_t* data_p = <peak_t*>np_arr_pointer(data)
+        norm_method_t norm_method = str_to_norm_method(norm)
+
+    if data.shape[0] == 0:
+        return peaks
+
+    peaks.assign(data_p, data_p+data.shape[0])
+    peaks = normalize_data_nogil(peaks, norm_method)
+    
+    if peaks.size() == 0:
+        return np.empty((0,2), dtype=np.float32)
+        
+    normalized = arr_from_peaks_vector(peaks)
+    
+    # Free memory
+    peaks.clear()
+    peaks.shrink_to_fit()
+    
+    return normalized
+
+
 def filter_data(double mz_parent, np.ndarray[np.float32_t, ndim=2] data,
                 int min_intensity, int parent_filter_tolerance,
                 int matched_peaks_window, int min_matched_peaks_search,
-                double mz_min = 50.):
-    cdef np.ndarray[np.float32_t, ndim=2] filtered
-    cdef vector[peak_t] peaks = filter_data_nogil(mz_parent, <peak_t*>np_arr_pointer(data), data.shape[0], min_intensity, parent_filter_tolerance, matched_peaks_window, min_matched_peaks_search, mz_min)
+                double mz_min = 50., bool square_root=True, str norm='dot'):
+    cdef:
+        np.ndarray[np.float32_t, ndim=2] filtered
+        norm_method_t norm_method = str_to_norm_method(norm)
+        vector[peak_t] peaks
+
+    peaks = filter_data_nogil(mz_parent, <peak_t*>np_arr_pointer(data), data.shape[0],
+                              min_intensity, parent_filter_tolerance,
+                              matched_peaks_window, min_matched_peaks_search,
+                              mz_min, square_root, norm_method)
     
     if peaks.size() == 0:
         return np.empty((0,2), dtype=np.float32)
@@ -197,13 +282,15 @@ def filter_data(double mz_parent, np.ndarray[np.float32_t, ndim=2] data,
     peaks.shrink_to_fit()
     
     return filtered
+
     
 def filter_data_multi(vector[double] mzvec, list datavec, int min_intensity,
                       int parent_filter_tolerance, int matched_peaks_window,
                       int min_matched_peaks_search, double mz_min = 50.,
-                      object callback=None):
+                      bool square_root=True, str norm='dot', object callback=None):
     cdef:
         list filtered = []
+        norm_method_t norm_method = str_to_norm_method(norm)
         np.ndarray[np.float32_t, ndim=2] tmp_array
         vector[vector[peak_t]] spectra
         vector[peak_t] peaks
@@ -218,7 +305,10 @@ def filter_data_multi(vector[double] mzvec, list datavec, int min_intensity,
         data_p[i] = <peak_t*>np_arr_pointer(tmp_array)
         data_sizes[i] = tmp_array.shape[0]
     
-    spectra = filter_data_multi_nogil(mzvec, data_p, data_sizes, min_intensity, parent_filter_tolerance, matched_peaks_window, min_matched_peaks_search, mz_min, callback)
+    spectra = filter_data_multi_nogil(mzvec, data_p, data_sizes,
+                                      min_intensity, parent_filter_tolerance,
+                                      matched_peaks_window, min_matched_peaks_search,
+                                      mz_min, square_root, norm_method, callback)
     
     for i in range(size):
         peaks = spectra[i]
