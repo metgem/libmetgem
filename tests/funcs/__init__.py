@@ -3,15 +3,15 @@ import warnings
 import itertools
 
 from libmetgem import IS_CYTHONIZED
-from libmetgem.cosine import compute_similarity_matrix
 from libmetgem.network import generate_network
 from libmetgem.mgf import read as read_mgf
 from libmetgem.msp import read as read_msp
 from libmetgem.filter import filter_data, filter_data_multi
-from libmetgem.cosine import (cosine_score,
-                              entropy_score,
-                              weighted_entropy_score,
-                              compare_spectra)
+from libmetgem.score import (compute_similarity_matrix,
+                             cosine_score,
+                             entropy_score,
+                             weighted_entropy_score,
+                             compare_spectra)
 from libmetgem.database import query
 from libmetgem.neighbors import kneighbors_graph_from_similarity_matrix
 
@@ -42,13 +42,12 @@ class ScoreFuncGenerator:
         self.variant = variant
         
     def __call__(self, scoring, *args, **kwargs):
-        match scoring:
-            case 'cosine':
-                func = cosine_score
-            case 'entropy':
-                func = entropy_score
-            case 'weighted_entropy':
-                func = weighted_entropy_score
+        if scoring == 'cosine':
+            func = cosine_score
+        elif scoring == 'entropy':
+            func = entropy_score
+        elif scoring == 'weighted_entropy':
+            func = weighted_entropy_score
         return FuncWrapper(func, self.variant)
         
     def __str__(self):
