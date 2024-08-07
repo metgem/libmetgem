@@ -31,7 +31,7 @@ jobs:
     - name: Add OpenMP flags (macOS)
       if: runner.os == 'macOS'
       run: |
-        brew info libomp
+        brew install libomp -y
         echo "LDFLAGS=${LDFLAGS} -L$(brew --prefix libomp)/lib" >> "$GITHUB_ENV"
         echo "CPPFLAGS=${CPPFLAGS} -I$(brew --prefix libomp)/include" >> "$GITHUB_ENV"
     - name: Show python info
