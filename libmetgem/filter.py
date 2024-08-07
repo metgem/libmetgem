@@ -23,7 +23,7 @@ def parent_filter(mz_parent: float, data: np.ndarray, min_intensity: int,
 
     if data.size > 0:
         # Keep only peaks higher than threshold
-        data = data[data[:, INTENSITY] >= min_intensity * data[:, INTENSITY].max() / 100]
+        data = data[data[:, INTENSITY] >= min_intensity / 100. * data[:, INTENSITY].max()]
         
     return data
     
