@@ -250,7 +250,7 @@ def test_filter_data_empty(scoring, min_intensity, parent_filter_tolerance,
     
     filtered = filter_data(parent, data, min_intensity,
                   parent_filter_tolerance, matched_peaks_window,
-                  min_matched_peaks_search, mz_min, scoring=='cosine',  'dot' if scoring=='cosine' else 'sum')
+                  min_matched_peaks_search, mz_min, scoring=='cosine', 'dot' if scoring=='cosine' else 'sum')
     assert filtered.size == 0
 
 @pytest.mark.python
