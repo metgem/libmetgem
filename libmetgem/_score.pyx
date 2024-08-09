@@ -318,14 +318,14 @@ def compare_spectra(double spectrum1_mz,
                     double spectrum2_mz,
                     np.ndarray[np.float32_t, ndim=2] spectrum2_data,
                     double mz_tolerance,
-                    str score = 'cosine'):
+                    str scoring = 'cosine'):
     cdef:
         vector[score_t] matches
         score_algorithm_t score_algorithm
 
-    if score == 'weighted_entropy':
+    if scoring == 'weighted_entropy':
         score_algorithm = score_algorithm_t.weighted_entropy
-    elif score == 'entropy':
+    elif scoring == 'entropy':
         score_algorithm = score_algorithm_t.entropy
     else:
         score_algorithm = score_algorithm_t.cosine
@@ -339,7 +339,13 @@ def compare_spectra(double spectrum1_mz,
         spectrum2_data.shape[0],
         mz_tolerance,
         score_algorithm=score_algorithm)
-    return np.asarray(arr_from_score_vector(matches))
+    
+    result = np.asarray(arr_from_score_vector(matches))
+    
+    if scoring in ('entropy', 'weighted_entropy'):
+        result['score'] /= 2
+        
+    return result
 
 
 def cosine_score(double spectrum1_mz,

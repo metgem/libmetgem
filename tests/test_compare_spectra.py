@@ -50,8 +50,7 @@ def test_compare_spectra_identity(scoring, random_spectrum, mz_tolerance, compar
     
     comparison = compare_spectra_f(mz, data, mz, data, mz_tolerance, scoring)
     assert comparison.size == data.shape[0]
-    expected_sum = 1.0 if scoring == 'cosine' else 2.0
-    assert comparison['score'].sum() == pytest.approx(expected_sum)
+    assert comparison['score'].sum() == pytest.approx(1.0)
     
 
 @pytest.mark.parametrize("random_spectrum", range(4), indirect=True)

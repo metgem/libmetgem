@@ -223,9 +223,9 @@ def entropy_score(
 @load_cython
 def compare_spectra(spectrum1_mz: float, spectrum1_data: np.ndarray,
                     spectrum2_mz: float, spectrum2_data: np.ndarray,
-                    mz_tolerance: float, score: str = 'cosine') -> np.ndarray:
+                    mz_tolerance: float, scoring: str = 'cosine') -> np.ndarray:
     """
-        Compute cosine similarity score of two spectra and return an array
+        Compute similarity score of two spectra and return an array
         of indexes of matches peaks from the two spectra.
 
     Args:
@@ -237,6 +237,7 @@ def compare_spectra(spectrum1_mz: float, spectrum1_data: np.ndarray,
             should be normalized to norm 1.
         mz_tolerance: maximum *m/z* delta allowed between two peaks to consider
             them as identical.
+        scoring: Algorithm used for spectral comparison.
     
     Returns:
         Record array with four columns:
@@ -248,15 +249,20 @@ def compare_spectra(spectrum1_mz: float, spectrum1_data: np.ndarray,
     
     _, _, matches = _compare_spectra(spectrum1_mz, spectrum1_data,
                                      spectrum2_mz, spectrum2_data,
-                                     mz_tolerance, score,
+                                     mz_tolerance, scoring,
                                      return_matches=True)
-    return np.asarray(matches, dtype=np.dtype([('ix1', '<u2'), ('ix2', '<u2'), ('score', '<f8'), ('type', '<u1')]))
+    result = np.asarray(matches, dtype=np.dtype([('ix1', '<u2'), ('ix2', '<u2'), ('score', '<f8'), ('type', '<u1')]))
+    
+    if scoring in ('entropy', 'weighted_entropy'):
+        result['score'] /= 2
+    
+    return result
 
 
 @load_cython
 def compute_similarity_matrix(mzs: List[float], spectra: List[np.ndarray],
                             mz_tolerance: float, min_matched_peaks: float,
-                            score_algorithm: str = 'cosine',
+                            scoring: str = 'cosine',
                             callback: Callable[[int], bool]=None, dense_output: bool=True) -> Union[np.ndarray, csr_matrix]:
     """
         Compute pairwise similarity matrix of a list of spectra.
@@ -268,6 +274,7 @@ def compute_similarity_matrix(mzs: List[float], spectra: List[np.ndarray],
             them as identical.
         min_matched_peaks: score will be 0 if the two spectra have less than
             `min_matched_peaks` peaks in common.
+        scoring: Algorithm used for spectral comparison.
         callback: function called to track progress of computation. First
             parameter (`int`) is the number of spectra computed since last call.
             It should return True if processing should continue, or False if
@@ -289,7 +296,7 @@ def compute_similarity_matrix(mzs: List[float], spectra: List[np.ndarray],
             for j in range(i):
                 matrix[i, j] = matrix[j, i] = generic_score(mzs[i], spectra[i], mzs[j], spectra[j],
                                                             mz_tolerance, min_matched_peaks,
-                                                            score_algorithm)
+                                                            scoring)
             if callback is not None:
                 if not callback(i):
                     return
@@ -310,7 +317,7 @@ def compute_similarity_matrix(mzs: List[float], spectra: List[np.ndarray],
             for j in range(i+1, size):
                 score = generic_score(mzs[i], spectra[i], mzs[j], spectra[j],
                                       mz_tolerance, min_matched_peaks,
-                                      score_algorithm)
+                                      scoring)
                 if score > 0:
                     data.append(min(score, 1))
                     indices.append(j)
