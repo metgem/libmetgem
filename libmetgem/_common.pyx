@@ -49,7 +49,7 @@ cdef class ArrayWrapper:
             
         arr = PyArray_NewFromDescr(<PyTypeObject *> np.ndarray, self.dtype,
                                        <int> size, shape, NULL, self.ptr,
-                                       np.NPY_DEFAULT, <object> NULL)
+                                       np.NPY_ARRAY_DEFAULT, <object> NULL)
         free(<void*>shape)
         Py_INCREF(self)
         return arr
